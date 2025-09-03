@@ -11,7 +11,8 @@ export const syncCases = internalAction({
     newCaseCount: v.number(),
   }),
   handler: async ctx => {
-    const baseUrl = process.env.STORTINGET_BASE_URL ?? 'https://data.stortinget.no';
+    const baseUrl =
+      process.env.STORTINGET_BASE_URL ?? 'https://data.stortinget.no';
     const url = new URL('/eksport/saker', baseUrl);
     url.searchParams.set('format', 'json');
 

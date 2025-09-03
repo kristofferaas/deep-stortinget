@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Dates from data.stortinget.no are in Microsoft JSON Date format
 export function parseMicrosoftJsonDate(input: string): string {
   const match = /\/Date\((\d+)([+-]\d{4})?\)\//.exec(input);
-  if (!match) throw new Error("Invalid Microsoft JSON Date");
+  if (!match) throw new Error('Invalid Microsoft JSON Date');
   const ms = Number(match[1]); // UTC milliseconds since epoch
   return new Date(ms).toISOString(); // "2023-03-08T23:00:00.000Z"
 }
@@ -46,7 +46,10 @@ export const caseSchema = z.object({
   status: z.number(),
   sist_oppdatert_dato: z.string().transform(parseMicrosoftJsonDate),
   sak_fremmet_id: z.number(),
-  henvisning: z.string().nullable().transform(val => val ?? undefined),
+  henvisning: z
+    .string()
+    .nullable()
+    .transform(val => val ?? undefined),
   dokumentgruppe: z.number(),
 });
 
