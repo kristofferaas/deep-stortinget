@@ -84,3 +84,6 @@ dist
 # Temporary folders
 tmp/
 temp/
+
+# Convex generated files
+convex/_generated/
