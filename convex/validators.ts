@@ -17,3 +17,18 @@ export const hearingValidator = v.object({
 });
 
 export type Hearing = Infer<typeof hearingValidator>;
+
+export const caseValidator = v.object({
+  id: v.number(),
+  versjon: v.string(),
+  type: v.number(),
+  tittel: v.string(),
+  korttittel: v.string(),
+  status: v.number(),
+  sist_oppdatert_dato: v.string(),
+  sak_fremmet_id: v.number(),
+  henvisning: v.optional(v.string()),
+  dokumentgruppe: v.number(),
+});
+
+export type Case = Infer<typeof caseValidator>;

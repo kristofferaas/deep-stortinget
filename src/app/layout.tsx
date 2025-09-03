@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'aas.dev',
-  description: 'aas.dev',
+  title: 'Deep Stortinget',
+  description: 'Deep Stortinget (WIP)',
 };
 
 export default function RootLayout({

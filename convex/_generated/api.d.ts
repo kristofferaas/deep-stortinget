@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as stortinget_cases from "../stortinget/cases.js";
 import type * as stortinget_hearings from "../stortinget/hearings.js";
 import type * as stortinget_helpers from "../stortinget/helpers.js";
 import type * as validators from "../validators.js";
@@ -26,6 +27,7 @@ import type * as validators from "../validators.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "stortinget/cases": typeof stortinget_cases;
   "stortinget/hearings": typeof stortinget_hearings;
   "stortinget/helpers": typeof stortinget_helpers;
   validators: typeof validators;

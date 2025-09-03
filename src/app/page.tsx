@@ -1,10 +1,17 @@
-import HearingCount from './hearing-count';
+"use client"
+
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 export default function Home() {
+  const hearingsCount = useQuery(api.stortinget.hearings.hearingCount);
+  const casesCount = useQuery(api.stortinget.cases.caseCount);
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-2 bg-white">
-      <h1 className="text-black font-geist-sans text-sm">Deep Stortinget</h1>
-      <HearingCount />
+    <div className="bg-white h-dvh p-4 text-black font-mono text-sm">
+      <h1>Deep Stortinget</h1>
+      <br />
+      <p>Hearings in DB: {hearingsCount ?? '…'}</p>
+      <p>Cases in DB: {casesCount ?? '…'}</p>
     </div>
   );
 }
