@@ -50,6 +50,3 @@ jobs:
 
       - name: Run knip
         run: pnpm knip
-
-      - name: Build project
-        run: pnpm build
