@@ -1,8 +1,6 @@
-import { defineSchema, defineTable } from "convex/server";
-import { hearingValidator } from "./validators";
+import { defineSchema, defineTable } from 'convex/server';
+import { hearingValidator } from './validators';
 
 export default defineSchema({
-  hearings: defineTable(hearingValidator).index("by_hearing_id", ["id"]),
+  hearings: defineTable(hearingValidator).index('by_hearing_id', ['id']),
 });
-
-

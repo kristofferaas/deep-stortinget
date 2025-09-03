@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const hearingSchema = z.object({
   id: z.number(),
@@ -26,6 +26,3 @@ export const hearingResponseSchema = z.object({
 });
 
 export type HearingResponse = z.infer<typeof hearingResponseSchema>;
-
-
-

@@ -1,4 +1,4 @@
-import { v, Infer } from "convex/values";
+import { v, Infer } from 'convex/values';
 
 export const hearingValidator = v.object({
   id: v.number(),
