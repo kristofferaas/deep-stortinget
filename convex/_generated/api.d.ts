@@ -13,6 +13,9 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as stortinget_hearings from "../stortinget/hearings.js";
+import type * as stortinget_helpers from "../stortinget/helpers.js";
+import type * as validators from "../validators.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -22,7 +25,11 @@ import type {
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  "stortinget/hearings": typeof stortinget_hearings;
+  "stortinget/helpers": typeof stortinget_helpers;
+  validators: typeof validators;
+}>;
 export declare const api: FilterApi<
   typeof fullApi,
   FunctionReference<any, "public">
