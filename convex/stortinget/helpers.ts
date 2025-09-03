@@ -40,17 +40,41 @@ export type HearingResponse = z.infer<typeof hearingResponseSchema>;
 export const caseSchema = z.object({
   id: z.number(),
   versjon: z.string(),
-  type: z.number(),
+  type: z.number().transform(val => {
+    if (val === 1) return 'budsjett';
+    if (val === 2) return 'alminneligsak';
+    if (val === 3) return 'lovsak';
+    throw new Error('Invalid case type');
+  }),
   tittel: z.string(),
   korttittel: z.string(),
-  status: z.number(),
+  status: z.number().transform(val => {
+    if (val === 1) return 'behandlet';
+    if (val === 2) return 'til_behandling';
+    if (val === 3) return 'mottatt';
+    if (val === 4) return 'varslet'; // TODO: I have not verified status 4
+    if (val === 5) return 'trukket'; // TODO: I have not verified status 5
+    if (val === 6) return 'bortfalt'; // TODO: I have not verified status 6
+    throw new Error('Invalid case status');
+  }),
+  dokumentgruppe: z.number().transform(val => {
+    if (val === 0) return 'ikke_spesifisert';
+    if (val === 1) return 'proposisjon';
+    if (val === 2) return 'melding';
+    if (val === 3) return 'redegjoerelse';
+    if (val === 4) return 'representantforslag';
+    if (val === 5) return 'grunnlovsforslag';
+    if (val === 6) return 'dokumentserien';
+    if (val === 7) return 'innstillingssaker';
+    if (val === 8) return 'innberetning';
+    throw new Error('Invalid case document group');
+  }),
   sist_oppdatert_dato: z.string().transform(parseMicrosoftJsonDate),
   sak_fremmet_id: z.number(),
   henvisning: z
     .string()
     .nullable()
     .transform(val => val ?? undefined),
-  dokumentgruppe: z.number(),
 });
 
 export type Case = z.infer<typeof caseSchema>;

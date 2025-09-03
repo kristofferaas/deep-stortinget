@@ -21,14 +21,35 @@ export type Hearing = Infer<typeof hearingValidator>;
 export const caseValidator = v.object({
   id: v.number(),
   versjon: v.string(),
-  type: v.number(),
+  type: v.union(
+    v.literal('budsjett'),
+    v.literal('lovsak'),
+    v.literal('alminneligsak')
+  ),
   tittel: v.string(),
   korttittel: v.string(),
-  status: v.number(),
+  status: v.union(
+    v.literal('varslet'),
+    v.literal('mottatt'),
+    v.literal('til_behandling'),
+    v.literal('behandlet'),
+    v.literal('trukket'),
+    v.literal('bortfalt')
+  ),
+  dokumentgruppe: v.union(
+    v.literal('ikke_spesifisert'),
+    v.literal('proposisjon'),
+    v.literal('melding'),
+    v.literal('redegjoerelse'),
+    v.literal('representantforslag'),
+    v.literal('grunnlovsforslag'),
+    v.literal('dokumentserien'),
+    v.literal('innstillingssaker'),
+    v.literal('innberetning')
+  ),
   sist_oppdatert_dato: v.string(),
   sak_fremmet_id: v.number(),
   henvisning: v.optional(v.string()),
-  dokumentgruppe: v.number(),
 });
 
 export type Case = Infer<typeof caseValidator>;
