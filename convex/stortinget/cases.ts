@@ -4,6 +4,8 @@ import { caseResponseSchema } from './helpers';
 import { internal } from '../_generated/api';
 import { caseValidator } from '../validators';
 
+// latestCases moved to end of file
+
 export const syncCases = internalAction({
   args: {},
   returns: v.object({
@@ -65,5 +67,56 @@ export const caseCount = query({
   handler: async ctx => {
     const cases = await ctx.db.query('cases').collect();
     return cases.length;
+  },
+});
+
+export const latestCases = query({
+  args: {},
+  returns: v.array(caseValidator),
+  handler: async ctx => {
+    const docs = await ctx.db
+      .query('cases')
+      .withIndex('by_last_updated_date')
+      .order('desc')
+      .take(100);
+
+    return docs.map(doc => ({
+      id: doc.id,
+      versjon: doc.versjon,
+      type: doc.type,
+      tittel: doc.tittel,
+      korttittel: doc.korttittel,
+      status: doc.status,
+      dokumentgruppe: doc.dokumentgruppe,
+      sist_oppdatert_dato: doc.sist_oppdatert_dato,
+      sak_fremmet_id: doc.sak_fremmet_id,
+      henvisning: doc.henvisning,
+    }));
+  },
+});
+
+export const getCaseById = query({
+  args: { id: v.number() },
+  returns: v.union(caseValidator, v.null()),
+  handler: async (ctx, args) => {
+    const doc = await ctx.db
+      .query('cases')
+      .withIndex('by_case_id', q => q.eq('id', args.id))
+      .unique();
+
+    if (!doc) return null;
+
+    return {
+      id: doc.id,
+      versjon: doc.versjon,
+      type: doc.type,
+      tittel: doc.tittel,
+      korttittel: doc.korttittel,
+      status: doc.status,
+      dokumentgruppe: doc.dokumentgruppe,
+      sist_oppdatert_dato: doc.sist_oppdatert_dato,
+      sak_fremmet_id: doc.sak_fremmet_id,
+      henvisning: doc.henvisning,
+    };
   },
 });

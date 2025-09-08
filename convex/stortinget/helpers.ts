@@ -2,10 +2,26 @@ import { z } from 'zod';
 
 // Dates from data.stortinget.no are in Microsoft JSON Date format
 export function parseMicrosoftJsonDate(input: string): string {
-  const match = /\/Date\((\d+)([+-]\d{4})?\)\//.exec(input);
-  if (!match) throw new Error('Invalid Microsoft JSON Date');
-  const ms = Number(match[1]); // UTC milliseconds since epoch
-  return new Date(ms).toISOString(); // "2023-03-08T23:00:00.000Z"
+  const match = /\/Date\((-?\d+)([+-]\d{4})?\)\//.exec(input);
+  if (!match) {
+    throw new Error('Invalid Microsoft JSON Date. Received: ' + input);
+  }
+  const ms = Number(match[1]);
+
+  // If an offset like +0200 or -0700 is present, adjust to UTC.
+  // In the Microsoft JSON Date format, the milliseconds represent the local time
+  // at the given offset. To get the UTC instant, subtract the offset.
+  let adjustedMs = ms;
+  const offset = match[2];
+  if (offset) {
+    const sign = offset[0] === '+' ? 1 : -1;
+    const hours = Number(offset.slice(1, 3));
+    const minutes = Number(offset.slice(3, 5));
+    const totalOffsetMinutes = sign * (hours * 60 + minutes);
+    adjustedMs = ms - totalOffsetMinutes * 60_000;
+  }
+
+  return new Date(adjustedMs).toISOString();
 }
 
 // Hearing (høring) schemas
