@@ -1,6 +1,6 @@
 import { internalAction, internalMutation, query } from '../_generated/server';
 import { v } from 'convex/values';
-import { hearingResponseSchema } from './helpers';
+import { hearingResponseSchema } from '../sync/helpers';
 import { internal } from '../_generated/api';
 import { hearingValidator } from '../validators';
 

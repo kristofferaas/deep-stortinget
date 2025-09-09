@@ -1,65 +1,7 @@
-import { internalAction, internalMutation, query } from '../_generated/server';
 import { v } from 'convex/values';
-import { caseResponseSchema } from './helpers';
-import { internal } from '../_generated/api';
+import { query } from '../_generated/server';
 import { caseValidator } from '../validators';
-
-// latestCases moved to end of file
-
-export const syncCases = internalAction({
-  args: {},
-  returns: v.object({
-    status: v.number(),
-    newCaseCount: v.number(),
-  }),
-  handler: async ctx => {
-    const baseUrl =
-      process.env.STORTINGET_BASE_URL ?? 'https://data.stortinget.no';
-    const url = new URL('/eksport/saker', baseUrl);
-    url.searchParams.set('format', 'json');
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
-
-    try {
-      const json = await response.json();
-      const parsed = caseResponseSchema.parse(json);
-
-      const inserted: number = await ctx.runMutation(
-        internal.stortinget.cases.insertMissingCases,
-        { cases: parsed.saker_liste }
-      );
-
-      return { status: response.status, newCaseCount: inserted };
-    } catch (err) {
-      console.error(err);
-      return { status: response.status, newCaseCount: 0 };
-    }
-  },
-});
-
-export const insertMissingCases = internalMutation({
-  args: {
-    cases: v.array(caseValidator),
-  },
-  returns: v.number(),
-  handler: async (ctx, args) => {
-    let insertedCount = 0;
-    for (const sak of args.cases) {
-      const existing = await ctx.db
-        .query('cases')
-        .withIndex('by_case_id', q => q.eq('id', sak.id))
-        .unique();
-      if (!existing) {
-        await ctx.db.insert('cases', sak);
-        insertedCount += 1;
-      }
-    }
-    return insertedCount;
-  },
-});
+import { voteValidator } from '../sync/validators';
 
 export const caseCount = query({
   args: {},
@@ -97,7 +39,13 @@ export const latestCases = query({
 
 export const getCaseById = query({
   args: { id: v.number() },
-  returns: v.union(caseValidator, v.null()),
+  returns: v.union(
+    v.object({
+      case: caseValidator,
+      votes: v.array(voteValidator),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
     const doc = await ctx.db
       .query('cases')
@@ -106,7 +54,14 @@ export const getCaseById = query({
 
     if (!doc) return null;
 
-    return {
+    const votes = await ctx.db
+      .query('votes')
+      .withIndex('by_case_id', q => q.eq('sak_id', args.id))
+      .collect();
+
+    console.log('For case', args.id, 'found', votes.length, 'votes');
+
+    const serializedCase = {
       id: doc.id,
       versjon: doc.versjon,
       type: doc.type,
@@ -117,6 +72,21 @@ export const getCaseById = query({
       sist_oppdatert_dato: doc.sist_oppdatert_dato,
       sak_fremmet_id: doc.sak_fremmet_id,
       henvisning: doc.henvisning,
+    };
+
+    const serializedVotes = votes.map(v => ({
+      sak_id: v.sak_id,
+      vedtatt: v.vedtatt,
+      votering_id: v.votering_id,
+      votering_resultat_type: v.votering_resultat_type,
+      votering_resultat_type_tekst: v.votering_resultat_type_tekst,
+      votering_tema: v.votering_tema,
+      votering_tid: v.votering_tid,
+    }));
+
+    return {
+      case: serializedCase,
+      votes: serializedVotes,
     };
   },
 });

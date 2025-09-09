@@ -45,18 +45,21 @@ export default function CaseDetailsPage() {
         </div>
       ) : (
         <div>
-          <div>ID: {data.id}</div>
-          <div>TITLE: {data.tittel}</div>
-          <div>SHORT: {data.korttittel}</div>
-          <div>TYPE: {data.type}</div>
-          <div>STATUS: {data.status}</div>
-          <div>DOCGROUP: {data.dokumentgruppe}</div>
-          <div>LAST UPDATED: {data.sist_oppdatert_dato}</div>
-          <div>PROMOTED ID: {data.sak_fremmet_id}</div>
-          {data.henvisning ? <div>REF: {data.henvisning}</div> : null}
+          <div>ID: {data.case.id}</div>
+          <div>TITLE: {data.case.tittel}</div>
+          <div>SHORT: {data.case.korttittel}</div>
+          <div>TYPE: {data.case.type}</div>
+          <div>STATUS: {data.case.status}</div>
+          <div>DOCGROUP: {data.case.dokumentgruppe}</div>
+          <div>LAST UPDATED: {data.case.sist_oppdatert_dato}</div>
+          <div>PROMOTED ID: {data.case.sak_fremmet_id}</div>
+          {data.case.henvisning ? <div>REF: {data.case.henvisning}</div> : null}
           <div className="mt-2">
             <Link href="/cases">[ Back to list ]</Link>
           </div>
+          <code>
+            <pre>{JSON.stringify(data.votes, null, 2)}</pre>
+          </code>
         </div>
       )}
     </div>
