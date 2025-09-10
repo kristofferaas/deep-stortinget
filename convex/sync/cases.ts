@@ -7,7 +7,8 @@ import { caseValidator } from '../validators';
 export const syncCases = internalAction({
   args: {},
   returns: v.object({
-    syncedCases: v.array(v.number()),
+    inserted: v.array(v.number()),
+    updated: v.array(v.number()),
   }),
   handler: async ctx => {
     const baseUrl =
@@ -23,12 +24,12 @@ export const syncCases = internalAction({
     const json = await response.json();
     const parsed = caseResponseSchema.parse(json);
 
-    const result: { inserted: number[] } = await ctx.runMutation(
-      internal.sync.cases.upsertCases,
-      { cases: parsed.saker_liste }
-    );
+    const result: { inserted: number[]; updated: number[] } =
+      await ctx.runMutation(internal.sync.cases.upsertCases, {
+        cases: parsed.saker_liste,
+      });
 
-    return { syncedCases: result.inserted };
+    return result;
   },
 });
 
@@ -38,19 +39,25 @@ export const upsertCases = internalMutation({
   },
   returns: v.object({
     inserted: v.array(v.number()),
+    updated: v.array(v.number()),
   }),
   handler: async (ctx, args) => {
     const inserted: number[] = [];
+    const updated: number[] = [];
     for (const sak of args.cases) {
       const existing = await ctx.db
         .query('cases')
         .withIndex('by_case_id', q => q.eq('id', sak.id))
         .unique();
+
       if (!existing) {
         await ctx.db.insert('cases', sak);
         inserted.push(sak.id);
+      } else if (existing.sist_oppdatert_dato !== sak.sist_oppdatert_dato) {
+        await ctx.db.replace(existing._id, sak);
+        updated.push(sak.id);
       }
     }
-    return { inserted };
+    return { inserted, updated };
   },
 });

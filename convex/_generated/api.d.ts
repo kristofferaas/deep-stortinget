@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
 import type * as stortinget_cases from "../stortinget/cases.js";
 import type * as stortinget_hearings from "../stortinget/hearings.js";
 import type * as stortinget_votes from "../stortinget/votes.js";
@@ -33,6 +34,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   "stortinget/cases": typeof stortinget_cases;
   "stortinget/hearings": typeof stortinget_hearings;
   "stortinget/votes": typeof stortinget_votes;
