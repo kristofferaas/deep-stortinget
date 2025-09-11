@@ -28,7 +28,6 @@ export const startWorkflow = internalAction({
           await new Promise(resolve => setTimeout(resolve, 1000));
           continue;
         }
-        console.log('Workflow completed with status:', status);
         await ctx.runMutation(internal.sync.workflow.setSyncStatus, {
           key: 'stortinget_sync',
           status: status.type === 'failed' ? 'error' : 'success',

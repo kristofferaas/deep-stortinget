@@ -2,7 +2,7 @@ import { v } from 'convex/values';
 import { z } from 'zod';
 import { internalAction, internalMutation } from '../_generated/server';
 import { parseMicrosoftJsonDate } from './helpers';
-import { Vote, voteValidator } from './validators';
+import { voteValidator } from './validators';
 import { internal } from '../_generated/api';
 
 const voteSchema = z.object({

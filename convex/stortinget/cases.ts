@@ -1,7 +1,6 @@
 import { v } from 'convex/values';
 import { query } from '../_generated/server';
-import { caseValidator } from '../validators';
-import { voteValidator } from '../sync/validators';
+import { caseValidator, voteValidator } from '../sync/validators';
 
 export const caseCount = query({
   args: {},

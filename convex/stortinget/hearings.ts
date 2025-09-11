@@ -1,8 +1,8 @@
-import { internalAction, internalMutation, query } from '../_generated/server';
 import { v } from 'convex/values';
-import { hearingResponseSchema } from '../sync/helpers';
 import { internal } from '../_generated/api';
-import { hearingValidator } from '../validators';
+import { internalAction, internalMutation, query } from '../_generated/server';
+import { hearingResponseSchema } from '../sync/helpers';
+import { hearingValidator } from '../sync/validators';
 
 export const syncHearings = internalAction({
   args: {},

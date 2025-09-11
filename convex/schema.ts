@@ -1,7 +1,10 @@
 import { defineSchema, defineTable } from 'convex/server';
-import { hearingValidator, caseValidator } from './validators';
-import { voteValidator } from './sync/validators';
 import { v } from 'convex/values';
+import {
+  caseValidator,
+  hearingValidator,
+  voteValidator,
+} from './sync/validators';
 
 export default defineSchema({
   hearings: defineTable(hearingValidator).index('by_hearing_id', ['id']),

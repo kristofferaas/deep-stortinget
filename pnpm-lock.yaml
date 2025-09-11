@@ -3,10 +3,10 @@ lockfileVersion: '6.0'
 dependencies:
   '@convex-dev/workflow':
     specifier: ^0.2.6
-    version: 0.2.6(@convex-dev/workpool@0.2.18)(convex-helpers@0.1.104)(convex@1.26.2)
+    version: 0.2.6(@convex-dev/workpool@0.2.18)(convex-helpers@0.1.104)(convex@1.27.0)
   convex:
-    specifier: ^1.26.2
-    version: 1.26.2(react@19.1.0)
+    specifier: ^1.27.0
+    version: 1.27.0(react@19.1.0)
   next:
     specifier: 15.5.2
     version: 15.5.2(react-dom@19.1.0)(react@19.1.0)
@@ -65,27 +65,27 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  /@convex-dev/workflow@0.2.6(@convex-dev/workpool@0.2.18)(convex-helpers@0.1.104)(convex@1.26.2):
+  /@convex-dev/workflow@0.2.6(@convex-dev/workpool@0.2.18)(convex-helpers@0.1.104)(convex@1.27.0):
     resolution: {integrity: sha512-jXaRqBHiRKHCbm8kll0+PxlRtHFkmXCVVbKBhuVYLP4/O5Tlxb2teXDKx+pv3hsmcps0uySm5QKSmsp51N1hTw==}
     peerDependencies:
       '@convex-dev/workpool': ^0.2.17
       convex: '>=1.25.0 <1.35.0'
       convex-helpers: ^0.1.99
     dependencies:
-      '@convex-dev/workpool': 0.2.18(convex-helpers@0.1.104)(convex@1.26.2)
+      '@convex-dev/workpool': 0.2.18(convex-helpers@0.1.104)(convex@1.27.0)
       async-channel: 0.2.0
-      convex: 1.26.2(react@19.1.0)
-      convex-helpers: 0.1.104(convex@1.26.2)(react@19.1.0)(typescript@5.9.2)(zod@4.1.5)
+      convex: 1.27.0(react@19.1.0)
+      convex-helpers: 0.1.104(convex@1.27.0)(react@19.1.0)(typescript@5.9.2)(zod@4.1.5)
     dev: false
 
-  /@convex-dev/workpool@0.2.18(convex-helpers@0.1.104)(convex@1.26.2):
+  /@convex-dev/workpool@0.2.18(convex-helpers@0.1.104)(convex@1.27.0):
     resolution: {integrity: sha512-tfRfBCukaRiybxwy4/W3rLWpIRhPivFH9tC5++d0XE1sV627vw2mAwOM9SnpY1k+BWVoNrHrHrxBheklSbuAag==}
     peerDependencies:
       convex: '>=1.25.0 <1.35.0'
       convex-helpers: ^0.1.94
     dependencies:
-      convex: 1.26.2(react@19.1.0)
-      convex-helpers: 0.1.104(convex@1.26.2)(react@19.1.0)(typescript@5.9.2)(zod@4.1.5)
+      convex: 1.27.0(react@19.1.0)
+      convex-helpers: 0.1.104(convex@1.27.0)(react@19.1.0)(typescript@5.9.2)(zod@4.1.5)
     dev: false
 
   /@emnapi/core@1.5.0:
@@ -1741,7 +1741,7 @@ packages:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
     dev: true
 
-  /convex-helpers@0.1.104(convex@1.26.2)(react@19.1.0)(typescript@5.9.2)(zod@4.1.5):
+  /convex-helpers@0.1.104(convex@1.27.0)(react@19.1.0)(typescript@5.9.2)(zod@4.1.5):
     resolution: {integrity: sha512-7CYvx7T3K6n+McDTK4ZQaQNNGBzq5aWezpjzsKbOxPXx7oNcTP9wrpef3JxeXWFzkByJv5hRCjseh9B7eNJ7Ig==}
     hasBin: true
     peerDependencies:
@@ -1763,14 +1763,14 @@ packages:
       zod:
         optional: true
     dependencies:
-      convex: 1.26.2(react@19.1.0)
+      convex: 1.27.0(react@19.1.0)
       react: 19.1.0
       typescript: 5.9.2
       zod: 4.1.5
     dev: false
 
-  /convex@1.26.2(react@19.1.0):
-    resolution: {integrity: sha512-QG3zvZ9GTTeeBS+N5PJj73TULHYu99eVSOI3KU2hMnB9q40fHxkMFJ+AYox+K81roTakciBvNTvGlhfz+M10fQ==}
+  /convex@1.27.0(react@19.1.0):
+    resolution: {integrity: sha512-IHkqZX3GtY4nKFPTAR4mvWHHhDiQX9PM7EjpEv0pJWoMoq0On6oOL3iZ7Xz4Ls96dF7WJd4AjfitJsg2hUnLSQ==}
     engines: {node: '>=18.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:

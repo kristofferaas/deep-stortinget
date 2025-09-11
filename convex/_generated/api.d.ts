@@ -17,7 +17,6 @@ import type * as sync_helpers from "../sync/helpers.js";
 import type * as sync_validators from "../sync/validators.js";
 import type * as sync_votes from "../sync/votes.js";
 import type * as sync_workflow from "../sync/workflow.js";
-import type * as validators from "../validators.js";
 
 import type {
   ApiFromModules,
@@ -43,7 +42,6 @@ declare const fullApi: ApiFromModules<{
   "sync/validators": typeof sync_validators;
   "sync/votes": typeof sync_votes;
   "sync/workflow": typeof sync_workflow;
-  validators: typeof validators;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

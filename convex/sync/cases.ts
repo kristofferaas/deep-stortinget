@@ -2,7 +2,7 @@ import { internalAction, internalMutation } from '../_generated/server';
 import { v } from 'convex/values';
 import { caseResponseSchema } from './helpers';
 import { internal } from '../_generated/api';
-import { caseValidator } from '../validators';
+import { caseValidator } from './validators';
 
 export const syncCases = internalAction({
   args: {},
