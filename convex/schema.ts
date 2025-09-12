@@ -1,8 +1,8 @@
 import { defineSchema, defineTable } from 'convex/server';
-import { v } from 'convex/values';
 import {
   caseValidator,
   hearingValidator,
+  syncStatusValidator,
   voteValidator,
 } from './sync/validators';
 
@@ -14,17 +14,5 @@ export default defineSchema({
   votes: defineTable(voteValidator)
     .index('by_vote_id', ['votering_id'])
     .index('by_case_id', ['sak_id']),
-  sync: defineTable(
-    v.object({
-      key: v.string(),
-      status: v.union(
-        v.literal('idle'),
-        v.literal('in_progress'),
-        v.literal('success'),
-        v.literal('error')
-      ),
-      message: v.optional(v.string()),
-      lastFinishedAt: v.number(),
-    })
-  ).index('by_key', ['key']),
+  sync: defineTable(syncStatusValidator).index('by_key', ['key']),
 });

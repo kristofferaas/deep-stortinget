@@ -4,6 +4,9 @@ dependencies:
   '@convex-dev/workflow':
     specifier: ^0.2.6
     version: 0.2.6(@convex-dev/workpool@0.2.18)(convex-helpers@0.1.104)(convex@1.27.0)
+  '@convex-dev/workpool':
+    specifier: ^0.2.18
+    version: 0.2.18(convex-helpers@0.1.104)(convex@1.27.0)
   convex:
     specifier: ^1.27.0
     version: 1.27.0(react@19.1.0)

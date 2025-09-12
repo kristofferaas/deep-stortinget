@@ -50,22 +50,27 @@ export const syncVotesForCase = internalAction({
     url.searchParams.set('format', 'json');
     url.searchParams.set('sakid', args.caseId.toString());
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
 
-    const json = await response.json();
-    const parsed = voteResponseSchema.parse(json);
+      const json = await response.json();
+      const parsed = voteResponseSchema.parse(json);
 
-    const result: { insertedVotes: number[] } = await ctx.runMutation(
-      internal.sync.votes.insertVotes,
-      {
-        votes: parsed.sak_votering_liste ?? [],
-      }
-    );
+      const result: { insertedVotes: number[] } = await ctx.runMutation(
+        internal.sync.votes.insertVotes,
+        {
+          votes: parsed.sak_votering_liste ?? [],
+        }
+      );
 
-    return result;
+      return result;
+    } catch (err) {
+      console.error('Error syncing votes for case', args.caseId);
+      throw err;
+    }
   },
 });
 

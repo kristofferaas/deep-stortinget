@@ -76,3 +76,18 @@ export const voteValidator = v.object({
 });
 
 export type Vote = Infer<typeof voteValidator>;
+
+export const syncStatusValidator = v.object({
+  key: v.string(),
+  status: v.union(
+    v.literal('idle'),
+    v.literal('in_progress'),
+    v.literal('success'),
+    v.literal('error'),
+    v.literal('canceled')
+  ),
+  message: v.optional(v.string()),
+  lastFinishedAt: v.number(),
+});
+
+export type SyncStatus = Infer<typeof syncStatusValidator>;
