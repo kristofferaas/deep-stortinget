@@ -3,6 +3,7 @@ import { vResultValidator } from '@convex-dev/workpool';
 import { v } from 'convex/values';
 import { components, internal } from '../_generated/api';
 import { internalAction, internalMutation, query } from '../_generated/server';
+import { SyncStatus } from './validators';
 
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
@@ -85,6 +86,7 @@ export const updateStatus = internalMutation({
     message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
     const currentStatus = await ctx.db
       .query('sync')
       .withIndex('by_key', q => q.eq('key', 'stortinget_sync'))
@@ -92,19 +94,51 @@ export const updateStatus = internalMutation({
 
     if (!currentStatus) {
       // insert new status
-      await ctx.db.insert('sync', {
+      const insertDoc: SyncStatus = {
         key: 'stortinget_sync',
         status: args.status,
-        lastFinishedAt: Date.now(),
-        message: args.message,
-      });
+      };
+      if (args.message !== undefined) insertDoc.message = args.message;
+      if (args.status === 'in_progress') insertDoc.startedAt = now;
+      if (
+        args.status === 'success' ||
+        args.status === 'error' ||
+        args.status === 'canceled'
+      ) {
+        insertDoc.finishedAt = now;
+      }
+      await ctx.db.insert('sync', insertDoc);
     } else {
-      // update status
-      await ctx.db.replace(currentStatus._id, {
-        key: 'stortinget_sync',
-        status: args.status,
-        lastFinishedAt: Date.now(),
-      });
+      // update status with appropriate timestamps
+      const patch: Partial<{
+        status: 'success' | 'error' | 'canceled' | 'in_progress' | 'idle';
+        message: string | undefined;
+        startedAt: number;
+        finishedAt: number;
+      }> = { status: args.status };
+
+      if (args.message !== undefined) patch.message = args.message;
+
+      switch (args.status) {
+        case 'in_progress':
+          if (
+            !currentStatus?.startedAt ||
+            currentStatus.status !== 'in_progress'
+          ) {
+            patch.startedAt = now;
+          }
+          break;
+        case 'success':
+        case 'error':
+        case 'canceled':
+          patch.finishedAt = now;
+          break;
+        case 'idle':
+          // leave timestamps as-is
+          break;
+      }
+
+      await ctx.db.patch(currentStatus._id, patch);
     }
   },
 });

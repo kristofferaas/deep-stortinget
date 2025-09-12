@@ -87,7 +87,8 @@ export const syncStatusValidator = v.object({
     v.literal('canceled')
   ),
   message: v.optional(v.string()),
-  lastFinishedAt: v.number(),
+  startedAt: v.optional(v.number()),
+  finishedAt: v.optional(v.number()),
 });
 
 export type SyncStatus = Infer<typeof syncStatusValidator>;

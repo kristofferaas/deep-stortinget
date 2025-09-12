@@ -1,0 +1,61 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+type Props = {
+  status?: 'idle' | 'in_progress' | 'success' | 'error' | 'canceled';
+  startedAt?: number;
+  finishedAt?: number;
+  /** How often to tick in ms while in_progress */
+  tickMs?: number;
+  /** Optional formatter for duration in ms */
+  render?: (durationMs: number) => React.ReactNode;
+};
+
+function defaultRender(durationMs: number) {
+  const seconds = Math.round(durationMs / 1000);
+  return `${seconds}s`;
+}
+
+export default function SyncDuration({
+  status,
+  startedAt,
+  finishedAt,
+  tickMs = 1000,
+  render = defaultRender,
+}: Props) {
+  const [now, setNow] = useState<number>(() => Date.now());
+  const intervalRef = useRef<number | null>(null);
+
+  const isInProgress = status === 'in_progress';
+
+  useEffect(() => {
+    if (isInProgress) {
+      // start ticking
+      intervalRef.current = window.setInterval(
+        () => setNow(Date.now()),
+        tickMs
+      );
+      return () => {
+        if (intervalRef.current !== null) {
+          window.clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+    } else {
+      // stop ticking if not in progress
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }, [isInProgress, tickMs]);
+
+  const durationMs = useMemo(() => {
+    if (!startedAt) return undefined;
+    const end = finishedAt ?? (isInProgress ? now : undefined);
+    if (!end || end < startedAt) return undefined;
+    return end - startedAt;
+  }, [startedAt, finishedAt, isInProgress, now]);
+
+  if (!durationMs) return <span>—</span>;
+  return <span>{render(durationMs)}</span>;
+}

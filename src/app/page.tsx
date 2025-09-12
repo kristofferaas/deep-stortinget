@@ -3,6 +3,7 @@
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import AsciiSpinner from './ascii-spinner';
+import SyncDuration from './sync-duration';
 
 export default function Home() {
   const hearingsCount = useQuery(api.stortinget.hearings.hearingCount);
@@ -28,10 +29,22 @@ export default function Home() {
       <p>Sync status: {syncStatus ? syncStatus.status : <AsciiSpinner />}</p>
       <p>Sync message: {syncStatus ? syncStatus.message : <AsciiSpinner />}</p>
       <p>
+        Total time{' '}
+        {syncStatus ? (
+          <SyncDuration
+            status={syncStatus.status}
+            startedAt={syncStatus.startedAt}
+            finishedAt={syncStatus.finishedAt}
+          />
+        ) : (
+          <AsciiSpinner />
+        )}
+      </p>
+      <p>
         Last finished{' '}
         {syncStatus ? (
-          syncStatus.lastFinishedAt && syncStatus.lastFinishedAt > 0 ? (
-            new Date(syncStatus.lastFinishedAt).toLocaleString()
+          syncStatus.finishedAt && syncStatus.finishedAt > 0 ? (
+            new Date(syncStatus.finishedAt).toLocaleString()
           ) : (
             'never'
           )
