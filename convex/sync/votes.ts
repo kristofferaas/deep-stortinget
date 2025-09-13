@@ -1,13 +1,15 @@
 import { v } from 'convex/values';
 import { z } from 'zod';
 import { internalAction, internalMutation } from '../_generated/server';
-import { parseMicrosoftJsonDate } from './helpers';
+import {
+  parseMicrosoftJsonDate,
+  stortingetDtoSchema,
+  stripStortingetDtoMetadata,
+} from './helpers';
 import { voteValidator } from './validators';
 import { internal } from '../_generated/api';
 
-const voteSchema = z.object({
-  // respons_dato_tid: z.string().transform(parseMicrosoftJsonDate),
-  // versjon: z.string(),
+const voteSchema = stortingetDtoSchema.extend({
   // alternativ_votering_id: z.number(),
   // antall_for: z.number(),
   // antall_ikke_tilstede: z.number(),
@@ -31,9 +33,7 @@ const voteSchema = z.object({
   votering_tid: z.string().transform(parseMicrosoftJsonDate),
 });
 
-const voteResponseSchema = z.object({
-  versjon: z.string(),
-  respons_dato_tid: z.string().transform(parseMicrosoftJsonDate),
+const voteResponseSchema = stortingetDtoSchema.extend({
   sak_id: z.number(),
   sak_votering_liste: z.array(voteSchema),
 });
@@ -62,7 +62,7 @@ export const syncVotesForCase = internalAction({
       const result: { insertedVotes: number[] } = await ctx.runMutation(
         internal.sync.votes.insertVotes,
         {
-          votes: parsed.sak_votering_liste ?? [],
+          votes: parsed.sak_votering_liste.map(stripStortingetDtoMetadata),
         }
       );
 

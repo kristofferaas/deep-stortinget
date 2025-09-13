@@ -1,6 +1,6 @@
 import { internalAction, internalMutation } from '../_generated/server';
 import { v } from 'convex/values';
-import { caseResponseSchema } from './helpers';
+import { caseResponseSchema, stripStortingetDtoMetadata } from './helpers';
 import { internal } from '../_generated/api';
 import { caseValidator } from './validators';
 
@@ -24,7 +24,7 @@ export const syncCases = internalAction({
     const result: number[] = await ctx.runMutation(
       internal.sync.cases.upsertCases,
       {
-        cases: parsed.saker_liste,
+        cases: parsed.saker_liste.map(stripStortingetDtoMetadata),
       }
     );
 

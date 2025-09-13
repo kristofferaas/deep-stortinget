@@ -24,8 +24,27 @@ export function parseMicrosoftJsonDate(input: string): string {
   return new Date(adjustedMs).toISOString();
 }
 
+export const stortingetDtoSchema = z.object({
+  versjon: z.literal('1.6'),
+  respons_dato_tid: z.string().transform(parseMicrosoftJsonDate),
+});
+
+export const stripStortingetDtoMetadata = <
+  T extends z.infer<typeof stortingetDtoSchema>,
+>(
+  dto: T
+): Pretty<Omit<T, 'versjon' | 'respons_dato_tid'>> => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { versjon, respons_dato_tid, ...properties } = dto;
+  return properties;
+};
+
+type Pretty<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
 // Hearing (høring) schemas
-export const hearingSchema = z.object({
+export const hearingSchema = stortingetDtoSchema.extend({
   id: z.number(),
   status: z.number(),
   status_info_tekst: z.string(),
@@ -35,27 +54,22 @@ export const hearingSchema = z.object({
   innspillsfrist: z.string().transform(parseMicrosoftJsonDate),
   skriftlig: z.boolean(),
   anmodningsfrist_dato_tid: z.string().transform(parseMicrosoftJsonDate),
-  respons_dato_tid: z.string().transform(parseMicrosoftJsonDate),
-  versjon: z.string(),
   sesjon_id: z.string().optional(),
   horing_status: z.string(),
 });
 
 export type Hearing = z.infer<typeof hearingSchema>;
 
-export const hearingResponseSchema = z.object({
-  versjon: z.string(),
+export const hearingResponseSchema = stortingetDtoSchema.extend({
   sesjon_id: z.string(),
-  respons_dato_tid: z.string().transform(parseMicrosoftJsonDate),
   horinger_liste: z.array(hearingSchema),
 });
 
 export type HearingResponse = z.infer<typeof hearingResponseSchema>;
 
 // Case (sak) schemas
-export const caseSchema = z.object({
+export const caseSchema = stortingetDtoSchema.extend({
   id: z.number(),
-  versjon: z.string(),
   type: z.number().transform(val => {
     if (val === 1) return 'budsjett';
     if (val === 2) return 'alminneligsak';
@@ -95,10 +109,8 @@ export const caseSchema = z.object({
 
 export type Case = z.infer<typeof caseSchema>;
 
-export const caseResponseSchema = z.object({
-  versjon: z.string(),
+export const caseResponseSchema = stortingetDtoSchema.extend({
   sesjon_id: z.string(),
-  respons_dato_tid: z.string().transform(parseMicrosoftJsonDate),
   saker_liste: z.array(caseSchema),
 });
 

@@ -10,8 +10,6 @@ export const hearingValidator = v.object({
   innspillsfrist: v.string(),
   skriftlig: v.boolean(),
   anmodningsfrist_dato_tid: v.string(),
-  respons_dato_tid: v.string(),
-  versjon: v.string(),
   sesjon_id: v.optional(v.string()),
   horing_status: v.string(),
 });
@@ -20,7 +18,6 @@ export type Hearing = Infer<typeof hearingValidator>;
 
 export const caseValidator = v.object({
   id: v.number(),
-  versjon: v.string(),
   type: v.union(
     v.literal('budsjett'),
     v.literal('lovsak'),
@@ -81,7 +78,7 @@ export const syncStatusValidator = v.object({
   key: v.string(),
   status: v.union(
     v.literal('idle'),
-    v.literal('in_progress'),
+    v.literal('started'),
     v.literal('success'),
     v.literal('error'),
     v.literal('canceled')
@@ -92,3 +89,11 @@ export const syncStatusValidator = v.object({
 });
 
 export type SyncStatus = Infer<typeof syncStatusValidator>;
+
+export const partyValidator = v.object({
+  id: v.string(),
+  navn: v.string(),
+  representert_parti: v.boolean(),
+});
+
+export type Party = Infer<typeof partyValidator>;

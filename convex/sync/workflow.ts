@@ -14,8 +14,11 @@ export const workflow = new WorkflowManager(components.workflow, {
 export const syncStortingetWorkflow = workflow.define({
   handler: async step => {
     await step.runMutation(internal.sync.workflow.updateStatus, {
-      status: 'in_progress',
+      status: 'started',
     });
+
+    // Sync parties from data.stortinget.no to database
+    await step.runAction(internal.sync.parties.syncParties, {});
 
     // Sync cases from data.stortinget.no to database
     const caseIds = await step.runAction(internal.sync.cases.syncCases, {});
@@ -80,7 +83,7 @@ export const updateStatus = internalMutation({
       v.literal('success'),
       v.literal('error'),
       v.literal('canceled'),
-      v.literal('in_progress'),
+      v.literal('started'),
       v.literal('idle')
     ),
     message: v.optional(v.string()),
@@ -99,7 +102,7 @@ export const updateStatus = internalMutation({
         status: args.status,
       };
       if (args.message !== undefined) insertDoc.message = args.message;
-      if (args.status === 'in_progress') insertDoc.startedAt = now;
+      if (args.status === 'started') insertDoc.startedAt = now;
       if (
         args.status === 'success' ||
         args.status === 'error' ||
@@ -110,23 +113,15 @@ export const updateStatus = internalMutation({
       await ctx.db.insert('sync', insertDoc);
     } else {
       // update status with appropriate timestamps
-      const patch: Partial<{
-        status: 'success' | 'error' | 'canceled' | 'in_progress' | 'idle';
-        message: string | undefined;
-        startedAt: number;
-        finishedAt: number;
-      }> = { status: args.status };
+      const patch: Partial<SyncStatus> = { status: args.status };
 
       if (args.message !== undefined) patch.message = args.message;
 
       switch (args.status) {
-        case 'in_progress':
-          if (
-            !currentStatus?.startedAt ||
-            currentStatus.status !== 'in_progress'
-          ) {
-            patch.startedAt = now;
-          }
+        case 'started':
+          // Treat started as a new start: always set startedAt and clear finishedAt
+          patch.startedAt = now;
+          patch.finishedAt = undefined;
           break;
         case 'success':
         case 'error':
@@ -136,6 +131,25 @@ export const updateStatus = internalMutation({
         case 'idle':
           // leave timestamps as-is
           break;
+      }
+      // Ensure we never end up with finishedAt before startedAt.
+      // If finishing and startedAt is missing or after finishedAt, set startedAt to now.
+      if (
+        (args.status === 'success' ||
+          args.status === 'error' ||
+          args.status === 'canceled') &&
+        typeof patch.finishedAt === 'number'
+      ) {
+        const started = currentStatus?.startedAt;
+        if (typeof started !== 'number' || started > patch.finishedAt) {
+          patch.startedAt = now;
+        }
+      }
+
+      // When starting, explicitly clear any previous finishedAt
+      if (args.status === 'started') {
+        // Explicitly clear any previous finishedAt
+        patch.finishedAt = undefined;
       }
 
       await ctx.db.patch(currentStatus._id, patch);

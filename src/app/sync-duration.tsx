@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Props = {
-  status?: 'idle' | 'in_progress' | 'success' | 'error' | 'canceled';
+  status?: 'idle' | 'started' | 'success' | 'error' | 'canceled';
   startedAt?: number;
   finishedAt?: number;
-  /** How often to tick in ms while in_progress */
+  /** How often to tick in ms while started */
   tickMs?: number;
   /** Optional formatter for duration in ms */
   render?: (durationMs: number) => React.ReactNode;
@@ -25,7 +25,7 @@ export default function SyncDuration({
   const [now, setNow] = useState<number>(() => Date.now());
   const intervalRef = useRef<number | null>(null);
 
-  const isInProgress = status === 'in_progress';
+  const isInProgress = status === 'started';
 
   useEffect(() => {
     if (isInProgress) {

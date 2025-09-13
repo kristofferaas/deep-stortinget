@@ -30,7 +30,6 @@ export const latestCases = query({
 
     return docs.map((doc, index) => ({
       id: doc.id,
-      versjon: doc.versjon,
       type: doc.type,
       tittel: doc.tittel,
       korttittel: doc.korttittel,
@@ -56,7 +55,6 @@ export const paginatedCases = query({
     cases: v.array(
       v.object({
         id: v.number(),
-        versjon: v.string(),
         type: v.string(),
         tittel: v.string(),
         korttittel: v.string(),
@@ -96,7 +94,6 @@ export const paginatedCases = query({
 
     const cases = slice.map((doc, index) => ({
       id: doc.id,
-      versjon: doc.versjon,
       type: doc.type,
       tittel: doc.tittel,
       korttittel: doc.korttittel,
@@ -138,7 +135,6 @@ export const getCaseById = query({
 
     const serializedCase = {
       id: doc.id,
-      versjon: doc.versjon,
       type: doc.type,
       tittel: doc.tittel,
       korttittel: doc.korttittel,
