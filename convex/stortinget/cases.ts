@@ -12,16 +12,23 @@ export const caseCount = query({
 });
 
 export const latestCases = query({
-  args: {},
-  returns: v.array(caseValidator),
   handler: async ctx => {
     const docs = await ctx.db
       .query('cases')
       .withIndex('by_last_updated_date')
       .order('desc')
-      .take(100);
+      .take(50);
 
-    return docs.map(doc => ({
+    const votesForCases = await Promise.all(
+      docs.map(doc =>
+        ctx.db
+          .query('votes')
+          .withIndex('by_case_id', q => q.eq('sak_id', doc.id))
+          .collect()
+      )
+    );
+
+    return docs.map((doc, index) => ({
       id: doc.id,
       versjon: doc.versjon,
       type: doc.type,
@@ -32,6 +39,7 @@ export const latestCases = query({
       sist_oppdatert_dato: doc.sist_oppdatert_dato,
       sak_fremmet_id: doc.sak_fremmet_id,
       henvisning: doc.henvisning,
+      votes: votesForCases[index]?.length ?? 0,
     }));
   },
 });
