@@ -44,6 +44,74 @@ export const latestCases = query({
   },
 });
 
+export const paginatedCases = query({
+  args: {
+    page: v.number(),
+    pageSize: v.number(),
+  },
+  returns: v.object({
+    total: v.number(),
+    page: v.number(),
+    pageSize: v.number(),
+    cases: v.array(
+      v.object({
+        id: v.number(),
+        versjon: v.string(),
+        type: v.string(),
+        tittel: v.string(),
+        korttittel: v.string(),
+        status: v.string(),
+        dokumentgruppe: v.string(),
+        sist_oppdatert_dato: v.string(),
+        sak_fremmet_id: v.number(),
+        henvisning: v.optional(v.string()),
+        votes: v.number(),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const page = Math.max(1, Math.floor(args.page));
+    const pageSize = Math.min(100, Math.max(1, Math.floor(args.pageSize)));
+
+    const total = (await ctx.db.query('cases').collect()).length;
+
+    const offset = (page - 1) * pageSize;
+
+    const docs = await ctx.db
+      .query('cases')
+      .withIndex('by_last_updated_date')
+      .order('desc')
+      .take(offset + pageSize);
+
+    const slice = docs.slice(offset, offset + pageSize);
+
+    const votesForCases = await Promise.all(
+      slice.map(doc =>
+        ctx.db
+          .query('votes')
+          .withIndex('by_case_id', q => q.eq('sak_id', doc.id))
+          .collect()
+      )
+    );
+
+    const cases = slice.map((doc, index) => ({
+      id: doc.id,
+      versjon: doc.versjon,
+      type: doc.type,
+      tittel: doc.tittel,
+      korttittel: doc.korttittel,
+      status: doc.status,
+      dokumentgruppe: doc.dokumentgruppe,
+      sist_oppdatert_dato: doc.sist_oppdatert_dato,
+      sak_fremmet_id: doc.sak_fremmet_id ?? null,
+      henvisning: doc.henvisning,
+      votes: votesForCases[index]?.length ?? 0,
+    }));
+
+    return { total, page, pageSize, cases };
+  },
+});
+
 export const getCaseById = query({
   args: { id: v.number() },
   returns: v.union(
