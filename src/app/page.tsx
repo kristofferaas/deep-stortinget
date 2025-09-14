@@ -43,7 +43,7 @@ export default function Home() {
         )}
       </p>
       <p>
-        Last finished{' '}
+        Finished at{' '}
         {syncStatus ? (
           syncStatus.finishedAt && syncStatus.finishedAt > 0 ? (
             new Date(syncStatus.finishedAt).toLocaleString()
