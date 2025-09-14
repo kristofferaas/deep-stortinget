@@ -1,31 +1,31 @@
-import { v } from 'convex/values';
-import { query } from '../_generated/server';
-import { caseValidator, voteValidator } from '../sync/validators';
+import { v } from "convex/values";
+import { query } from "../_generated/server";
+import { caseValidator, voteValidator } from "../sync/validators";
 
 export const caseCount = query({
   args: {},
   returns: v.number(),
-  handler: async ctx => {
-    const cases = await ctx.db.query('cases').collect();
+  handler: async (ctx) => {
+    const cases = await ctx.db.query("cases").collect();
     return cases.length;
   },
 });
 
 export const latestCases = query({
-  handler: async ctx => {
+  handler: async (ctx) => {
     const docs = await ctx.db
-      .query('cases')
-      .withIndex('by_last_updated_date')
-      .order('desc')
+      .query("cases")
+      .withIndex("by_last_updated_date")
+      .order("desc")
       .take(50);
 
     const votesForCases = await Promise.all(
-      docs.map(doc =>
+      docs.map((doc) =>
         ctx.db
-          .query('votes')
-          .withIndex('by_case_id', q => q.eq('sak_id', doc.id))
-          .collect()
-      )
+          .query("votes")
+          .withIndex("by_case_id", (q) => q.eq("sak_id", doc.id))
+          .collect(),
+      ),
     );
 
     return docs.map((doc, index) => ({
@@ -64,32 +64,32 @@ export const paginatedCases = query({
         sak_fremmet_id: v.number(),
         henvisning: v.optional(v.string()),
         votes: v.number(),
-      })
+      }),
     ),
   }),
   handler: async (ctx, args) => {
     const page = Math.max(1, Math.floor(args.page));
     const pageSize = Math.min(100, Math.max(1, Math.floor(args.pageSize)));
 
-    const total = (await ctx.db.query('cases').collect()).length;
+    const total = (await ctx.db.query("cases").collect()).length;
 
     const offset = (page - 1) * pageSize;
 
     const docs = await ctx.db
-      .query('cases')
-      .withIndex('by_last_updated_date')
-      .order('desc')
+      .query("cases")
+      .withIndex("by_last_updated_date")
+      .order("desc")
       .take(offset + pageSize);
 
     const slice = docs.slice(offset, offset + pageSize);
 
     const votesForCases = await Promise.all(
-      slice.map(doc =>
+      slice.map((doc) =>
         ctx.db
-          .query('votes')
-          .withIndex('by_case_id', q => q.eq('sak_id', doc.id))
-          .collect()
-      )
+          .query("votes")
+          .withIndex("by_case_id", (q) => q.eq("sak_id", doc.id))
+          .collect(),
+      ),
     );
 
     const cases = slice.map((doc, index) => ({
@@ -116,22 +116,22 @@ export const getCaseById = query({
       case: caseValidator,
       votes: v.array(voteValidator),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     const doc = await ctx.db
-      .query('cases')
-      .withIndex('by_case_id', q => q.eq('id', args.id))
+      .query("cases")
+      .withIndex("by_case_id", (q) => q.eq("id", args.id))
       .unique();
 
     if (!doc) return null;
 
     const votes = await ctx.db
-      .query('votes')
-      .withIndex('by_case_id', q => q.eq('sak_id', args.id))
+      .query("votes")
+      .withIndex("by_case_id", (q) => q.eq("sak_id", args.id))
       .collect();
 
-    console.log('For case', args.id, 'found', votes.length, 'votes');
+    console.log("For case", args.id, "found", votes.length, "votes");
 
     const serializedCase = {
       id: doc.id,
@@ -145,7 +145,7 @@ export const getCaseById = query({
       henvisning: doc.henvisning,
     };
 
-    const serializedVotes = votes.map(v => ({
+    const serializedVotes = votes.map((v) => ({
       sak_id: v.sak_id,
       vedtatt: v.vedtatt,
       votering_id: v.votering_id,

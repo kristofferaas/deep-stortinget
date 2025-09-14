@@ -1,4 +1,4 @@
-import { v, Infer } from 'convex/values';
+import { v, Infer } from "convex/values";
 
 export const hearingValidator = v.object({
   id: v.number(),
@@ -19,30 +19,30 @@ export type Hearing = Infer<typeof hearingValidator>;
 export const caseValidator = v.object({
   id: v.number(),
   type: v.union(
-    v.literal('budsjett'),
-    v.literal('lovsak'),
-    v.literal('alminneligsak')
+    v.literal("budsjett"),
+    v.literal("lovsak"),
+    v.literal("alminneligsak"),
   ),
   tittel: v.string(),
   korttittel: v.string(),
   status: v.union(
-    v.literal('varslet'),
-    v.literal('mottatt'),
-    v.literal('til_behandling'),
-    v.literal('behandlet'),
-    v.literal('trukket'),
-    v.literal('bortfalt')
+    v.literal("varslet"),
+    v.literal("mottatt"),
+    v.literal("til_behandling"),
+    v.literal("behandlet"),
+    v.literal("trukket"),
+    v.literal("bortfalt"),
   ),
   dokumentgruppe: v.union(
-    v.literal('ikke_spesifisert'),
-    v.literal('proposisjon'),
-    v.literal('melding'),
-    v.literal('redegjoerelse'),
-    v.literal('representantforslag'),
-    v.literal('grunnlovsforslag'),
-    v.literal('dokumentserien'),
-    v.literal('innstillingssaker'),
-    v.literal('innberetning')
+    v.literal("ikke_spesifisert"),
+    v.literal("proposisjon"),
+    v.literal("melding"),
+    v.literal("redegjoerelse"),
+    v.literal("representantforslag"),
+    v.literal("grunnlovsforslag"),
+    v.literal("dokumentserien"),
+    v.literal("innstillingssaker"),
+    v.literal("innberetning"),
   ),
   sist_oppdatert_dato: v.string(),
   sak_fremmet_id: v.number(),
@@ -77,11 +77,11 @@ export type Vote = Infer<typeof voteValidator>;
 export const syncStatusValidator = v.object({
   key: v.string(),
   status: v.union(
-    v.literal('idle'),
-    v.literal('started'),
-    v.literal('success'),
-    v.literal('error'),
-    v.literal('canceled')
+    v.literal("idle"),
+    v.literal("started"),
+    v.literal("success"),
+    v.literal("error"),
+    v.literal("canceled"),
   ),
   message: v.optional(v.string()),
   startedAt: v.optional(v.number()),

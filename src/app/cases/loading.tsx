@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import AsciiSpinner from '../ascii-spinner';
+import AsciiSpinner from "../ascii-spinner";
 
 export default function Loading() {
   return (

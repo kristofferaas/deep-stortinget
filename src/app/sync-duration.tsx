@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
-  status?: 'idle' | 'started' | 'success' | 'error' | 'canceled';
+  status?: "idle" | "started" | "success" | "error" | "canceled";
   startedAt?: number;
   finishedAt?: number;
   /** How often to tick in ms while started */
@@ -25,7 +25,7 @@ function defaultRender(durationMs: number) {
   }
   parts.push(`${seconds}s`);
 
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 export default function SyncDuration({
@@ -38,14 +38,14 @@ export default function SyncDuration({
   const [now, setNow] = useState<number>(() => Date.now());
   const intervalRef = useRef<number | null>(null);
 
-  const isInProgress = status === 'started';
+  const isInProgress = status === "started";
 
   useEffect(() => {
     if (isInProgress) {
       // start ticking
       intervalRef.current = window.setInterval(
         () => setNow(Date.now()),
-        tickMs
+        tickMs,
       );
       return () => {
         if (intervalRef.current !== null) {
