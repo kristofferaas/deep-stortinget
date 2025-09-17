@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import { useParams } from 'next/navigation';
-import { useQuery } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
-import AsciiSpinner from '../../ascii-spinner';
-import Link from 'next/link';
+import { useParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import AsciiSpinner from "../../ascii-spinner";
+import Link from "next/link";
 
 export default function CaseDetailsPage() {
   const params = useParams();
   const idParam =
-    typeof params.id === 'string'
+    typeof params.id === "string"
       ? params.id
       : Array.isArray(params.id)
         ? params.id[0]
-        : '';
+        : "";
   const idNum = Number(idParam);
 
   const data = useQuery(
     api.stortinget.cases.getCaseById,
-    idNum ? { id: idNum } : 'skip'
+    idNum ? { id: idNum } : "skip",
   );
 
   if (!idNum) {

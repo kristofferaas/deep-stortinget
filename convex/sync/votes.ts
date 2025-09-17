@@ -1,13 +1,13 @@
-import { v } from 'convex/values';
-import { z } from 'zod';
-import { internalAction, internalMutation } from '../_generated/server';
+import { v } from "convex/values";
+import { z } from "zod";
+import { internalAction, internalMutation } from "../_generated/server";
 import {
   parseMicrosoftJsonDate,
   stortingetDtoSchema,
   stripStortingetDtoMetadata,
-} from './helpers';
-import { voteValidator } from './validators';
-import { internal } from '../_generated/api';
+} from "./helpers";
+import { voteValidator } from "./validators";
+import { internal } from "../_generated/api";
 
 const voteSchema = stortingetDtoSchema.extend({
   // alternativ_votering_id: z.number(),
@@ -28,7 +28,7 @@ const voteSchema = stortingetDtoSchema.extend({
   votering_resultat_type_tekst: z
     .string()
     .nullable()
-    .transform(val => val ?? undefined),
+    .transform((val) => val ?? undefined),
   votering_tema: z.string(),
   votering_tid: z.string().transform(parseMicrosoftJsonDate),
 });
@@ -45,15 +45,15 @@ export const syncVotesForCase = internalAction({
   }),
   handler: async (ctx, args) => {
     const baseUrl =
-      process.env.STORTINGET_BASE_URL ?? 'https://data.stortinget.no';
-    const url = new URL('/eksport/voteringer', baseUrl);
-    url.searchParams.set('format', 'json');
-    url.searchParams.set('sakid', args.caseId.toString());
+      process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
+    const url = new URL("/eksport/voteringer", baseUrl);
+    url.searchParams.set("format", "json");
+    url.searchParams.set("sakid", args.caseId.toString());
 
     try {
       const response = await fetch(url, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
+        method: "GET",
+        headers: { Accept: "application/json" },
       });
 
       const json = await response.json();
@@ -63,12 +63,12 @@ export const syncVotesForCase = internalAction({
         internal.sync.votes.insertVotes,
         {
           votes: parsed.sak_votering_liste.map(stripStortingetDtoMetadata),
-        }
+        },
       );
 
       return result;
     } catch (err) {
-      console.error('Error syncing votes for case', args.caseId);
+      console.error("Error syncing votes for case", args.caseId);
       throw err;
     }
   },
@@ -83,11 +83,11 @@ export const insertVotes = internalMutation({
     const insertedVotes: number[] = [];
     for (const vote of args.votes) {
       const existing = await ctx.db
-        .query('votes')
-        .withIndex('by_vote_id', q => q.eq('votering_id', vote.votering_id))
+        .query("votes")
+        .withIndex("by_vote_id", (q) => q.eq("votering_id", vote.votering_id))
         .unique();
       if (!existing) {
-        await ctx.db.insert('votes', vote);
+        await ctx.db.insert("votes", vote);
         insertedVotes.push(vote.votering_id);
       }
     }

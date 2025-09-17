@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
-import AsciiSpinner from '../ascii-spinner';
-import Link from 'next/link';
-import React from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import AsciiSpinner from "../ascii-spinner";
+import Link from "next/link";
+import React from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function Home() {
   const searchParams = useSearchParams();
-  const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10);
+  const pageParam = Number.parseInt(searchParams.get("page") ?? "1", 10);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
   const pageSize = 25;
 
@@ -34,7 +34,7 @@ export default function Home() {
       <hr />
       <br />
       <ul>
-        {data.cases.map(c => (
+        {data.cases.map((c) => (
           <React.Fragment key={c.id}>
             <li key={c.id}>
               <Link href={`/cases/${c.id}`}>
@@ -68,14 +68,14 @@ const Delimiter = () => {
 };
 
 const DateAndTime = ({ date }: { date: string }) => {
-  const prettyDate = new Date(date).toLocaleDateString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  const prettyDate = new Date(date).toLocaleDateString("en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
-  const prettyTime = new Date(date).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
+  const prettyTime = new Date(date).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
   });
   return (
@@ -102,15 +102,15 @@ const Pagination = ({
   return (
     <>
       {current > 1 && <Link href={firstHref}>[First]</Link>}
-      {current > 1 && ' '}
+      {current > 1 && " "}
       {current > 1 && <Link href={prevHref}>[Previous]</Link>}
-      {current > 1 && current < totalPages && ' '}
+      {current > 1 && current < totalPages && " "}
       <span>
-        {' '}
-        Page {current} of {totalPages}{' '}
+        {" "}
+        Page {current} of {totalPages}{" "}
       </span>
       {current < totalPages && <Link href={nextHref}>[Next]</Link>}
-      {current < totalPages && ' '}
+      {current < totalPages && " "}
       {current < totalPages && <Link href={lastHref}>[Last]</Link>}
     </>
   );

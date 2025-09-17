@@ -1,21 +1,21 @@
-import { internalAction, internalMutation } from '../_generated/server';
-import { v } from 'convex/values';
-import { caseResponseSchema, stripStortingetDtoMetadata } from './helpers';
-import { internal } from '../_generated/api';
-import { caseValidator } from './validators';
+import { internalAction, internalMutation } from "../_generated/server";
+import { v } from "convex/values";
+import { caseResponseSchema, stripStortingetDtoMetadata } from "./helpers";
+import { internal } from "../_generated/api";
+import { caseValidator } from "./validators";
 
 export const syncCases = internalAction({
   args: {},
   returns: v.array(v.number()),
-  handler: async ctx => {
+  handler: async (ctx) => {
     const baseUrl =
-      process.env.STORTINGET_BASE_URL ?? 'https://data.stortinget.no';
-    const url = new URL('/eksport/saker', baseUrl);
-    url.searchParams.set('format', 'json');
+      process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
+    const url = new URL("/eksport/saker", baseUrl);
+    url.searchParams.set("format", "json");
 
     const response = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
+      method: "GET",
+      headers: { Accept: "application/json" },
     });
 
     const json = await response.json();
@@ -25,7 +25,7 @@ export const syncCases = internalAction({
       internal.sync.cases.upsertCases,
       {
         cases: parsed.saker_liste.map(stripStortingetDtoMetadata),
-      }
+      },
     );
 
     return result;
@@ -41,12 +41,12 @@ export const upsertCases = internalMutation({
     const caseIds: number[] = [];
     for (const sak of args.cases) {
       const existing = await ctx.db
-        .query('cases')
-        .withIndex('by_case_id', q => q.eq('id', sak.id))
+        .query("cases")
+        .withIndex("by_case_id", (q) => q.eq("id", sak.id))
         .unique();
 
       if (!existing) {
-        await ctx.db.insert('cases', sak);
+        await ctx.db.insert("cases", sak);
         caseIds.push(sak.id);
       } else if (existing.sist_oppdatert_dato !== sak.sist_oppdatert_dato) {
         await ctx.db.replace(existing._id, sak);

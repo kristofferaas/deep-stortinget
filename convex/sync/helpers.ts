@@ -1,10 +1,10 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Dates from data.stortinget.no are in Microsoft JSON Date format
 export function parseMicrosoftJsonDate(input: string): string {
   const match = /\/Date\((-?\d+)([+-]\d{4})?\)\//.exec(input);
   if (!match) {
-    throw new Error('Invalid Microsoft JSON Date. Received: ' + input);
+    throw new Error("Invalid Microsoft JSON Date. Received: " + input);
   }
   const ms = Number(match[1]);
 
@@ -14,7 +14,7 @@ export function parseMicrosoftJsonDate(input: string): string {
   let adjustedMs = ms;
   const offset = match[2];
   if (offset) {
-    const sign = offset[0] === '+' ? 1 : -1;
+    const sign = offset[0] === "+" ? 1 : -1;
     const hours = Number(offset.slice(1, 3));
     const minutes = Number(offset.slice(3, 5));
     const totalOffsetMinutes = sign * (hours * 60 + minutes);
@@ -25,15 +25,15 @@ export function parseMicrosoftJsonDate(input: string): string {
 }
 
 export const stortingetDtoSchema = z.object({
-  versjon: z.literal('1.6'),
+  versjon: z.literal("1.6"),
   respons_dato_tid: z.string().transform(parseMicrosoftJsonDate),
 });
 
 export const stripStortingetDtoMetadata = <
   T extends z.infer<typeof stortingetDtoSchema>,
 >(
-  dto: T
-): Pretty<Omit<T, 'versjon' | 'respons_dato_tid'>> => {
+  dto: T,
+): Pretty<Omit<T, "versjon" | "respons_dato_tid">> => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { versjon, respons_dato_tid, ...properties } = dto;
   return properties;
@@ -70,41 +70,41 @@ export type HearingResponse = z.infer<typeof hearingResponseSchema>;
 // Case (sak) schemas
 export const caseSchema = stortingetDtoSchema.extend({
   id: z.number(),
-  type: z.number().transform(val => {
-    if (val === 1) return 'budsjett';
-    if (val === 2) return 'alminneligsak';
-    if (val === 3) return 'lovsak';
-    throw new Error('Invalid case type');
+  type: z.number().transform((val) => {
+    if (val === 1) return "budsjett";
+    if (val === 2) return "alminneligsak";
+    if (val === 3) return "lovsak";
+    throw new Error("Invalid case type");
   }),
   tittel: z.string(),
   korttittel: z.string(),
-  status: z.number().transform(val => {
-    if (val === 1) return 'behandlet';
-    if (val === 2) return 'til_behandling';
-    if (val === 3) return 'mottatt';
-    if (val === 4) return 'varslet'; // TODO: I have not verified status 4
-    if (val === 5) return 'trukket'; // TODO: I have not verified status 5
-    if (val === 6) return 'bortfalt'; // TODO: I have not verified status 6
-    throw new Error('Invalid case status');
+  status: z.number().transform((val) => {
+    if (val === 1) return "behandlet";
+    if (val === 2) return "til_behandling";
+    if (val === 3) return "mottatt";
+    if (val === 4) return "varslet"; // TODO: I have not verified status 4
+    if (val === 5) return "trukket"; // TODO: I have not verified status 5
+    if (val === 6) return "bortfalt"; // TODO: I have not verified status 6
+    throw new Error("Invalid case status");
   }),
-  dokumentgruppe: z.number().transform(val => {
-    if (val === 0) return 'ikke_spesifisert';
-    if (val === 1) return 'proposisjon';
-    if (val === 2) return 'melding';
-    if (val === 3) return 'redegjoerelse';
-    if (val === 4) return 'representantforslag';
-    if (val === 5) return 'grunnlovsforslag';
-    if (val === 6) return 'dokumentserien';
-    if (val === 7) return 'innstillingssaker';
-    if (val === 8) return 'innberetning';
-    throw new Error('Invalid case document group');
+  dokumentgruppe: z.number().transform((val) => {
+    if (val === 0) return "ikke_spesifisert";
+    if (val === 1) return "proposisjon";
+    if (val === 2) return "melding";
+    if (val === 3) return "redegjoerelse";
+    if (val === 4) return "representantforslag";
+    if (val === 5) return "grunnlovsforslag";
+    if (val === 6) return "dokumentserien";
+    if (val === 7) return "innstillingssaker";
+    if (val === 8) return "innberetning";
+    throw new Error("Invalid case document group");
   }),
   sist_oppdatert_dato: z.string().transform(parseMicrosoftJsonDate),
   sak_fremmet_id: z.number(),
   henvisning: z
     .string()
     .nullable()
-    .transform(val => val ?? undefined),
+    .transform((val) => val ?? undefined),
 });
 
 export type Case = z.infer<typeof caseSchema>;

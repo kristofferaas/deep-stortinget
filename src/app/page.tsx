@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import AsciiSpinner from './ascii-spinner';
-import SyncDuration from './sync-duration';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import AsciiSpinner from "./ascii-spinner";
+import SyncDuration from "./sync-duration";
 
 export default function Home() {
   const hearingsCount = useQuery(api.stortinget.hearings.hearingCount);
@@ -15,9 +15,9 @@ export default function Home() {
     <div className="bg-white h-dvh p-4 text-black font-mono text-sm">
       <h1>
         Deep Stortinget
-        {syncStatus?.status === 'started' ? (
+        {syncStatus?.status === "started" ? (
           <>
-            {' '}
+            {" "}
             <AsciiSpinner />
           </>
         ) : null}
@@ -31,7 +31,7 @@ export default function Home() {
       <p>Sync status: {syncStatus ? syncStatus.status : <AsciiSpinner />}</p>
       <p>Sync message: {syncStatus ? syncStatus.message : <AsciiSpinner />}</p>
       <p>
-        Total time{' '}
+        Total time{" "}
         {syncStatus ? (
           <SyncDuration
             status={syncStatus.status}
@@ -43,12 +43,12 @@ export default function Home() {
         )}
       </p>
       <p>
-        Finished at{' '}
+        Finished at{" "}
         {syncStatus ? (
           syncStatus.finishedAt && syncStatus.finishedAt > 0 ? (
             new Date(syncStatus.finishedAt).toLocaleString()
           ) : (
-            'never'
+            "never"
           )
         ) : (
           <AsciiSpinner />

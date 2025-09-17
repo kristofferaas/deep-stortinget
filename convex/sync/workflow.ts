@@ -1,9 +1,9 @@
-import { vWorkflowId, WorkflowManager } from '@convex-dev/workflow';
-import { vResultValidator } from '@convex-dev/workpool';
-import { v } from 'convex/values';
-import { components, internal } from '../_generated/api';
-import { internalAction, internalMutation, query } from '../_generated/server';
-import { SyncStatus } from './validators';
+import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
+import { vResultValidator } from "@convex-dev/workpool";
+import { v } from "convex/values";
+import { components, internal } from "../_generated/api";
+import { internalAction, internalMutation, query } from "../_generated/server";
+import { SyncStatus } from "./validators";
 
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
@@ -12,9 +12,9 @@ export const workflow = new WorkflowManager(components.workflow, {
 });
 
 export const syncStortingetWorkflow = workflow.define({
-  handler: async step => {
+  handler: async (step) => {
     await step.runMutation(internal.sync.workflow.updateStatus, {
-      status: 'started',
+      status: "started",
     });
 
     // Sync parties from data.stortinget.no to database
@@ -24,15 +24,15 @@ export const syncStortingetWorkflow = workflow.define({
     const caseIds = await step.runAction(internal.sync.cases.syncCases, {});
 
     // Run sync votes for all case ids in parallel
-    const promises = caseIds.map(id =>
-      step.runAction(internal.sync.votes.syncVotesForCase, { caseId: id })
+    const promises = caseIds.map((id) =>
+      step.runAction(internal.sync.votes.syncVotesForCase, { caseId: id }),
     );
     await Promise.all(promises);
   },
 });
 
 export const startWorkflow = internalAction({
-  handler: async ctx => {
+  handler: async (ctx) => {
     await workflow.start(
       ctx,
       internal.sync.workflow.syncStortingetWorkflow,
@@ -40,7 +40,7 @@ export const startWorkflow = internalAction({
       {
         onComplete: internal.sync.workflow.handleWorkflowComplete,
         context: {},
-      }
+      },
     );
   },
 });
@@ -52,25 +52,25 @@ export const handleWorkflowComplete = internalMutation({
     context: v.any(),
   },
   handler: async (ctx, args) => {
-    if (args.result.kind === 'success') {
+    if (args.result.kind === "success") {
       // cleanup, finalize DB, notify users, etc.
       await ctx.runMutation(internal.sync.workflow.updateStatus, {
-        status: 'success',
+        status: "success",
       });
       await workflow.cleanup(ctx, args.workflowId);
     } else {
       // record failure/cancellation
       await ctx.runMutation(
         internal.sync.workflow.updateStatus,
-        args.result.kind === 'canceled'
+        args.result.kind === "canceled"
           ? {
-              status: 'canceled',
-              message: 'Canceled',
+              status: "canceled",
+              message: "Canceled",
             }
           : {
-              status: 'error',
+              status: "error",
               message: args.result.error,
-            }
+            },
       );
       // Do not cleanup the workflow on error or canceled
     }
@@ -80,37 +80,37 @@ export const handleWorkflowComplete = internalMutation({
 export const updateStatus = internalMutation({
   args: {
     status: v.union(
-      v.literal('success'),
-      v.literal('error'),
-      v.literal('canceled'),
-      v.literal('started'),
-      v.literal('idle')
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("canceled"),
+      v.literal("started"),
+      v.literal("idle"),
     ),
     message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
     const currentStatus = await ctx.db
-      .query('sync')
-      .withIndex('by_key', q => q.eq('key', 'stortinget_sync'))
+      .query("sync")
+      .withIndex("by_key", (q) => q.eq("key", "stortinget_sync"))
       .unique();
 
     if (!currentStatus) {
       // insert new status
       const insertDoc: SyncStatus = {
-        key: 'stortinget_sync',
+        key: "stortinget_sync",
         status: args.status,
       };
       if (args.message !== undefined) insertDoc.message = args.message;
-      if (args.status === 'started') insertDoc.startedAt = now;
+      if (args.status === "started") insertDoc.startedAt = now;
       if (
-        args.status === 'success' ||
-        args.status === 'error' ||
-        args.status === 'canceled'
+        args.status === "success" ||
+        args.status === "error" ||
+        args.status === "canceled"
       ) {
         insertDoc.finishedAt = now;
       }
-      await ctx.db.insert('sync', insertDoc);
+      await ctx.db.insert("sync", insertDoc);
     } else {
       // update status with appropriate timestamps
       const patch: Partial<SyncStatus> = { status: args.status };
@@ -118,36 +118,36 @@ export const updateStatus = internalMutation({
       if (args.message !== undefined) patch.message = args.message;
 
       switch (args.status) {
-        case 'started':
+        case "started":
           // Treat started as a new start: always set startedAt and clear finishedAt
           patch.startedAt = now;
           patch.finishedAt = undefined;
           break;
-        case 'success':
-        case 'error':
-        case 'canceled':
+        case "success":
+        case "error":
+        case "canceled":
           patch.finishedAt = now;
           break;
-        case 'idle':
+        case "idle":
           // leave timestamps as-is
           break;
       }
       // Ensure we never end up with finishedAt before startedAt.
       // If finishing and startedAt is missing or after finishedAt, set startedAt to now.
       if (
-        (args.status === 'success' ||
-          args.status === 'error' ||
-          args.status === 'canceled') &&
-        typeof patch.finishedAt === 'number'
+        (args.status === "success" ||
+          args.status === "error" ||
+          args.status === "canceled") &&
+        typeof patch.finishedAt === "number"
       ) {
         const started = currentStatus?.startedAt;
-        if (typeof started !== 'number' || started > patch.finishedAt) {
+        if (typeof started !== "number" || started > patch.finishedAt) {
           patch.startedAt = now;
         }
       }
 
       // When starting, explicitly clear any previous finishedAt
-      if (args.status === 'started') {
+      if (args.status === "started") {
         // Explicitly clear any previous finishedAt
         patch.finishedAt = undefined;
       }
@@ -158,10 +158,10 @@ export const updateStatus = internalMutation({
 });
 
 export const getSyncStatus = query({
-  handler: async ctx => {
+  handler: async (ctx) => {
     const currentStatus = await ctx.db
-      .query('sync')
-      .withIndex('by_key', q => q.eq('key', 'stortinget_sync'))
+      .query("sync")
+      .withIndex("by_key", (q) => q.eq("key", "stortinget_sync"))
       .unique();
 
     return currentStatus;
