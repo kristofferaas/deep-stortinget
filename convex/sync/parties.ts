@@ -13,15 +13,15 @@ const partySchema = stortingetDtoSchema.extend({
 
 const partyResponseSchema = stortingetDtoSchema.extend({
   partier_liste: z.array(partySchema),
-  sesjon_id: z.string(),
-  stortingsperiode_id: z.string(),
+  sesjon_id: z.string().nullable(),
+  stortingsperiode_id: z.string().nullable(),
 });
 
 export const syncParties = internalAction({
   handler: async (ctx) => {
     const baseUrl =
       process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
-    const url = new URL("/eksport/partier", baseUrl);
+    const url = new URL("/eksport/allepartier", baseUrl);
     url.searchParams.set("format", "json");
 
     const response = await fetch(url, {
@@ -50,7 +50,13 @@ export const upsertParties = internalMutation({
         .withIndex("by_party_id", (q) => q.eq("id", party.id))
         .unique();
 
-      if (!existing) {
+      if (existing) {
+        // Toggle representert_parti if it has changed
+        if (existing.representert_parti !== party.representert_parti) {
+          await ctx.db.replace(existing._id, party);
+          partyIds.push(party.id);
+        }
+      } else {
         await ctx.db.insert("parties", party);
         partyIds.push(party.id);
       }
