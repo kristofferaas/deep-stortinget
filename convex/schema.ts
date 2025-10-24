@@ -1,4 +1,5 @@
 import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
 import {
   caseValidator,
   hearingValidator,
@@ -22,4 +23,11 @@ export default defineSchema({
   parties: defineTable(partyValidator).index("by_party_id", ["id"]),
   // Sync metadata table
   sync: defineTable(syncStatusValidator).index("by_key", ["key"]),
+  // Sync cache for tracking external data and avoiding redundant updates
+  syncCache: defineTable({
+    checksum: v.string(), // SHA256 hash of the data
+    table: v.string(), // Table name (e.g., "cases", "votes")
+    externalId: v.number(), // External ID from Stortinget API
+    internalId: v.union(v.id("cases"), v.id("votes"), v.id("voteProposals")), // Convex _id reference to avoid lookups
+  }).index("by_table_and_external_id", ["table", "externalId"]),
 });

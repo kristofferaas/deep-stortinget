@@ -31,16 +31,16 @@ export const syncStortingetWorkflow = workflow.define({
     // Sync cases from data.stortinget.no to database
     const caseIds = await step.runAction(internal.sync.cases.syncCases, {});
 
-    // Run sync votes for all case ids in parallel
+    // Sync votes for ALL cases in parallel
     const promises = caseIds.map((id) =>
       step.runAction(internal.sync.votes.syncVotesForCase, { caseId: id }),
     );
     const results = await Promise.all(promises);
 
-    // Flatten all inserted votes from all results
-    const allVoteIds = results.flatMap((result) => result.insertedVotes);
+    // Flatten ALL vote IDs (both new and existing) from all results
+    const allVoteIds = results.flatMap((result) => result.voteIds);
 
-    // Sync vote proposals for all synced votes in parallel
+    // Sync vote proposals for ALL votes in parallel
     const voteProposalPromises = allVoteIds.map((voteId) =>
       step.runAction(internal.sync.votesProposals.syncVoteProposals, {
         voteId,

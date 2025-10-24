@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { z } from "zod";
 import { internalAction, internalMutation } from "../_generated/server";
-import { stortingetDtoSchema } from "./helpers";
+import { stortingetDtoSchema, computeChecksum, batcher } from "./helpers";
 import { partySchema } from "./parties";
 import { voteProposalValidator, VoteProposal } from "./validators";
 import { internal } from "../_generated/api";
@@ -37,22 +37,41 @@ const voteProposalsResponseSchema = stortingetDtoSchema.extend({
 
 type VoteProposalDTO = z.infer<typeof voteProposalsResponseSchema>;
 
-const normalizeVoteProposals = (dto: VoteProposalDTO): VoteProposal[] => {
+const normalizeVoteProposals = async (
+  dto: VoteProposalDTO,
+): Promise<
+  Array<{
+    id: number;
+    data: Omit<VoteProposal, "checksum">;
+    checksum: string;
+  }>
+> => {
   const voteId = dto.votering_id;
-  return dto.voteringsforslag_liste.map((proposal) => ({
-    votering_id: voteId,
-    forslag_betegnelse: proposal.forslag_betegnelse,
-    forslag_betegnelse_kort: proposal.forslag_betegnelse_kort,
-    forslag_id: proposal.forslag_id,
-    forslag_paa_vegne_av_tekst: proposal.forslag_paa_vegne_av_tekst,
-    forslag_sorteringsnummer: proposal.forslag_sorteringsnummer,
-    forslag_tekst: proposal.forslag_tekst,
-    forslag_type: proposal.forslag_type,
-  }));
+  return await Promise.all(
+    dto.voteringsforslag_liste.map(async (proposal) => {
+      const normalized = {
+        votering_id: voteId,
+        forslag_betegnelse: proposal.forslag_betegnelse,
+        forslag_betegnelse_kort: proposal.forslag_betegnelse_kort,
+        forslag_id: proposal.forslag_id,
+        forslag_paa_vegne_av_tekst: proposal.forslag_paa_vegne_av_tekst,
+        forslag_sorteringsnummer: proposal.forslag_sorteringsnummer,
+        forslag_tekst: proposal.forslag_tekst,
+        forslag_type: proposal.forslag_type,
+      };
+      const checksum = await computeChecksum(normalized);
+      return {
+        id: proposal.forslag_id,
+        data: normalized,
+        checksum: checksum,
+      };
+    }),
+  );
 };
 
 export const syncVoteProposals = internalAction({
   args: { voteId: v.number() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const baseUrl =
       process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
@@ -68,36 +87,63 @@ export const syncVoteProposals = internalAction({
     const json = await response.json();
     const parsed = voteProposalsResponseSchema.parse(json);
 
-    const upserted: number[] = await ctx.runMutation(
-      internal.sync.votesProposals.upsertVoteProposals,
-      {
-        voteProposals: normalizeVoteProposals(parsed),
-      },
-    );
+    const voteProposalsWithChecksums = await normalizeVoteProposals(parsed);
 
-    return upserted;
+    // Process vote proposals in batches
+    await batcher(voteProposalsWithChecksums, async (batch) => {
+      return await ctx.runMutation(
+        internal.sync.votesProposals.batchUpsertVoteProposals,
+        {
+          batch,
+        },
+      );
+    });
+
+    return null;
   },
 });
 
-export const upsertVoteProposals = internalMutation({
-  args: { voteProposals: v.array(voteProposalValidator) },
+export const batchUpsertVoteProposals = internalMutation({
+  args: v.object({
+    batch: v.array(
+      v.object({
+        id: v.number(),
+        data: voteProposalValidator,
+        checksum: v.string(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
-    const voteProposalIds: number[] = [];
-    for (const voteProposal of args.voteProposals) {
-      const existing = await ctx.db
-        .query("voteProposals")
-        .withIndex("by_vote_proposal_id", (q) =>
-          q.eq("forslag_id", voteProposal.forslag_id),
+    for (const dto of args.batch) {
+      // First, check if a sync cache entry exists
+      // This only queries the index, not the full document (cheap!)
+      const cachedSync = await ctx.db
+        .query("syncCache")
+        .withIndex("by_table_and_external_id", (q) =>
+          q.eq("table", "voteProposals").eq("externalId", dto.id),
         )
         .unique();
 
-      if (existing) {
-        // TODO: Determine if we need to update the vote proposal
+      if (cachedSync && cachedSync.checksum === dto.checksum) {
+        // Checksum matches - skip (no database read or write needed!)
+        continue;
+      }
+
+      if (!cachedSync) {
+        // New record - insert vote proposal and sync cache entry
+        const voteProposalId = await ctx.db.insert("voteProposals", dto.data);
+        await ctx.db.insert("syncCache", {
+          table: "voteProposals",
+          externalId: dto.id,
+          checksum: dto.checksum,
+          internalId: voteProposalId,
+        });
       } else {
-        await ctx.db.insert("voteProposals", voteProposal);
-        voteProposalIds.push(voteProposal.forslag_id);
+        // Checksum changed - update vote proposal using stored internalId (no lookup needed!)
+        await ctx.db.replace(cachedSync.internalId, dto.data);
+        await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
       }
     }
-    return voteProposalIds;
+    return null;
   },
 });

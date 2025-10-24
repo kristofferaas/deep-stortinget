@@ -5,6 +5,8 @@ import {
   parseMicrosoftJsonDate,
   stortingetDtoSchema,
   stripStortingetDtoMetadata,
+  computeChecksum,
+  batcher,
 } from "./helpers";
 import { voteValidator } from "./validators";
 import { internal } from "../_generated/api";
@@ -41,7 +43,7 @@ const voteResponseSchema = stortingetDtoSchema.extend({
 export const syncVotesForCase = internalAction({
   args: { caseId: v.number() },
   returns: v.object({
-    insertedVotes: v.array(v.number()),
+    voteIds: v.array(v.number()),
   }),
   handler: async (ctx, args) => {
     const baseUrl =
@@ -50,47 +52,86 @@ export const syncVotesForCase = internalAction({
     url.searchParams.set("format", "json");
     url.searchParams.set("sakid", args.caseId.toString());
 
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-      });
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
 
-      const json = await response.json();
-      const parsed = voteResponseSchema.parse(json);
+    const json = await response.json();
+    const parsed = voteResponseSchema.parse(json);
 
-      const result: { insertedVotes: number[] } = await ctx.runMutation(
-        internal.sync.votes.insertVotes,
-        {
-          votes: parsed.sak_votering_liste.map(stripStortingetDtoMetadata),
-        },
+    // Compute checksums for all votes
+    const votesWithChecksums = await Promise.all(
+      parsed.sak_votering_liste.map(async (voteDto) => {
+        const stripped = stripStortingetDtoMetadata(voteDto);
+        const checksum = await computeChecksum(stripped);
+        return {
+          id: voteDto.votering_id,
+          data: stripped,
+          checksum: checksum,
+        };
+      }),
+    );
+
+    // Process votes in batches
+    const results = await batcher(votesWithChecksums, async (batch) => {
+      const result: number[] = await ctx.runMutation(
+        internal.sync.votes.batchUpsertVotes,
+        { batch },
       );
-
       return result;
-    } catch (err) {
-      console.error("Error syncing votes for case", args.caseId);
-      throw err;
-    }
+    });
+
+    const allVoteIds = results.flatMap((r) => r);
+    return { voteIds: allVoteIds };
   },
 });
 
-export const insertVotes = internalMutation({
-  args: { votes: v.array(voteValidator) },
-  returns: v.object({
-    insertedVotes: v.array(v.number()),
+export const batchUpsertVotes = internalMutation({
+  args: v.object({
+    batch: v.array(
+      v.object({
+        id: v.number(),
+        data: voteValidator,
+        checksum: v.string(),
+      }),
+    ),
   }),
   handler: async (ctx, args) => {
-    const insertedVotes: number[] = [];
-    for (const vote of args.votes) {
-      const existing = await ctx.db
-        .query("votes")
-        .withIndex("by_vote_id", (q) => q.eq("votering_id", vote.votering_id))
+    const voteIds: number[] = [];
+    for (const dto of args.batch) {
+      // First, check if a sync cache entry exists
+      // This only queries the index, not the full document (cheap!)
+      const cachedSync = await ctx.db
+        .query("syncCache")
+        .withIndex("by_table_and_external_id", (q) =>
+          q.eq("table", "votes").eq("externalId", dto.id),
+        )
         .unique();
-      if (!existing) {
-        await ctx.db.insert("votes", vote);
-        insertedVotes.push(vote.votering_id);
+
+      if (cachedSync && cachedSync.checksum === dto.checksum) {
+        // Checksum matches - skip (no database read or write needed!)
+        voteIds.push(dto.id);
+        continue;
       }
+
+      if (!cachedSync) {
+        // New record - insert vote and sync cache entry
+        const voteId = await ctx.db.insert("votes", dto.data);
+        await ctx.db.insert("syncCache", {
+          table: "votes",
+          externalId: dto.id,
+          checksum: dto.checksum,
+          internalId: voteId,
+        });
+      } else {
+        // Checksum changed - update vote using stored internalId (no lookup needed!)
+        await ctx.db.replace(cachedSync.internalId, dto.data);
+        await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
+      }
+
+      voteIds.push(dto.id);
     }
-    return { insertedVotes };
+    return voteIds;
   },
 });

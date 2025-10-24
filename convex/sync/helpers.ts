@@ -67,6 +67,36 @@ export const hearingResponseSchema = stortingetDtoSchema.extend({
 
 export type HearingResponse = z.infer<typeof hearingResponseSchema>;
 
+// Checksum computation for change detection
+export async function computeChecksum(data: unknown): Promise<string> {
+  // Deterministic JSON stringify with sorted keys
+  const json = JSON.stringify(data, (key, value) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return Object.keys(value)
+        .sort()
+        .reduce(
+          (sorted, key) => {
+            sorted[key] = value[key];
+            return sorted;
+          },
+          {} as Record<string, unknown>,
+        );
+    }
+    return value;
+  });
+
+  // Use Web Crypto API (available in V8 isolates)
+  const encoder = new TextEncoder();
+  const dataBytes = encoder.encode(json);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBytes);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return hashHex;
+}
+
 // Case (sak) schemas
 export const caseSchema = stortingetDtoSchema.extend({
   id: z.number(),
@@ -115,3 +145,18 @@ export const caseResponseSchema = stortingetDtoSchema.extend({
 });
 
 export type CaseResponse = z.infer<typeof caseResponseSchema>;
+
+// Batch processing helper
+export async function batcher<T, R>(
+  items: T[],
+  callback: (batch: T[]) => Promise<R>,
+  batchSize: number = 50,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batchItems = items.slice(i, i + batchSize);
+    const result = await callback(batchItems);
+    results.push(result);
+  }
+  return results;
+}
