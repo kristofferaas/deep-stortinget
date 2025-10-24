@@ -8,6 +8,13 @@ import { SyncStatus } from "./validators";
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
     maxParallelism: 1,
+    defaultRetryBehavior: {
+      maxAttempts: 5, // Maximum number of retry attempts (including first attempt)
+      initialBackoffMs: 1000, // Start with 1 second delay
+      base: 2, // Double the backoff time with each retry (exponential)
+      // This gives backoff sequence: 1s, 2s, 4s, 8s, 16s
+    },
+    retryActionsByDefault: true, // Enable retries by default for all actions
   },
 });
 
