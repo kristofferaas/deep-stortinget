@@ -1,5 +1,25 @@
 import { v, Infer } from "convex/values";
 
+// Sync status validator
+
+export const syncStatusValidator = v.object({
+  key: v.string(),
+  status: v.union(
+    v.literal("idle"),
+    v.literal("started"),
+    v.literal("success"),
+    v.literal("error"),
+    v.literal("canceled"),
+  ),
+  message: v.optional(v.string()),
+  startedAt: v.optional(v.number()),
+  finishedAt: v.optional(v.number()),
+});
+
+export type SyncStatus = Infer<typeof syncStatusValidator>;
+
+// The rest are all normalized schemas for the Stortinget API
+
 export const hearingValidator = v.object({
   id: v.number(),
   status: v.number(),
@@ -74,22 +94,6 @@ export const voteValidator = v.object({
 
 export type Vote = Infer<typeof voteValidator>;
 
-export const syncStatusValidator = v.object({
-  key: v.string(),
-  status: v.union(
-    v.literal("idle"),
-    v.literal("started"),
-    v.literal("success"),
-    v.literal("error"),
-    v.literal("canceled"),
-  ),
-  message: v.optional(v.string()),
-  startedAt: v.optional(v.number()),
-  finishedAt: v.optional(v.number()),
-});
-
-export type SyncStatus = Infer<typeof syncStatusValidator>;
-
 export const partyValidator = v.object({
   id: v.string(),
   navn: v.string(),
@@ -97,3 +101,18 @@ export const partyValidator = v.object({
 });
 
 export type Party = Infer<typeof partyValidator>;
+
+export const voteProposalValidator = v.object({
+  votering_id: v.number(),
+  forslag_betegnelse: v.optional(v.string()),
+  forslag_betegnelse_kort: v.optional(v.string()),
+  forslag_id: v.number(),
+  // forslag_levert_av_parti_liste: v.array(partyValidator),
+  // forslag_levert_av_representant: v.any(),
+  forslag_paa_vegne_av_tekst: v.optional(v.string()),
+  forslag_sorteringsnummer: v.number(),
+  forslag_tekst: v.optional(v.string()),
+  forslag_type: v.number(),
+});
+
+export type VoteProposal = Infer<typeof voteProposalValidator>;

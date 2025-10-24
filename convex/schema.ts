@@ -4,6 +4,7 @@ import {
   hearingValidator,
   partyValidator,
   syncStatusValidator,
+  voteProposalValidator,
   voteValidator,
 } from "./sync/validators";
 
@@ -15,6 +16,9 @@ export default defineSchema({
   votes: defineTable(voteValidator)
     .index("by_vote_id", ["votering_id"])
     .index("by_case_id", ["sak_id"]),
+  voteProposals: defineTable(voteProposalValidator)
+    .index("by_vote_proposal_id", ["forslag_id"])
+    .index("by_vote_id", ["votering_id"]),
   parties: defineTable(partyValidator).index("by_party_id", ["id"]),
   // Sync metadata table
   sync: defineTable(syncStatusValidator).index("by_key", ["key"]),

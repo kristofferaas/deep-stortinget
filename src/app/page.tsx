@@ -10,6 +10,9 @@ export default function Home() {
   const casesCount = useQuery(api.stortinget.cases.caseCount);
   const votesCount = useQuery(api.stortinget.votes.voteCount);
   const partiesCount = useQuery(api.stortinget.parties.partyCount);
+  const proposalsCount = useQuery(
+    api.stortinget.voteProposals.voteProposalCount,
+  );
   const syncStatus = useQuery(api.sync.workflow.getSyncStatus);
   return (
     <div className="bg-white h-dvh p-4 text-black font-mono text-sm">
@@ -27,6 +30,7 @@ export default function Home() {
       <p>Cases in DB: {casesCount ?? <AsciiSpinner />}</p>
       <p>Votes in DB: {votesCount ?? <AsciiSpinner />}</p>
       <p>Parties in DB: {partiesCount ?? <AsciiSpinner />}</p>
+      <p>Proposals in DB: {proposalsCount ?? <AsciiSpinner />}</p>
       <br />
       <p>Sync status: {syncStatus ? syncStatus.status : <AsciiSpinner />}</p>
       <p>Sync message: {syncStatus ? syncStatus.message : <AsciiSpinner />}</p>

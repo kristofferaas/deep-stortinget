@@ -18,6 +18,7 @@ export const workflow = new WorkflowManager(components.workflow, {
   },
 });
 
+// The actual workflow that will be run
 export const syncStortingetWorkflow = workflow.define({
   handler: async (step) => {
     await step.runMutation(internal.sync.workflow.updateStatus, {
@@ -34,9 +35,22 @@ export const syncStortingetWorkflow = workflow.define({
     const promises = caseIds.map((id) =>
       step.runAction(internal.sync.votes.syncVotesForCase, { caseId: id }),
     );
-    await Promise.all(promises);
+    const results = await Promise.all(promises);
+
+    // Flatten all inserted votes from all results
+    const allVoteIds = results.flatMap((result) => result.insertedVotes);
+
+    // Sync vote proposals for all synced votes in parallel
+    const voteProposalPromises = allVoteIds.map((voteId) =>
+      step.runAction(internal.sync.votesProposals.syncVoteProposals, {
+        voteId,
+      }),
+    );
+    await Promise.all(voteProposalPromises);
   },
 });
+
+// Workflow helpers
 
 export const startWorkflow = internalAction({
   handler: async (ctx) => {

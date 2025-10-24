@@ -5,7 +5,7 @@ import { internalAction, internalMutation } from "../_generated/server";
 import { stortingetDtoSchema, stripStortingetDtoMetadata } from "./helpers";
 import { partyValidator } from "./validators";
 
-const partySchema = stortingetDtoSchema.extend({
+export const partySchema = stortingetDtoSchema.extend({
   id: z.string(),
   navn: z.string(),
   representert_parti: z.boolean(),
