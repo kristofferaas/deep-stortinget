@@ -54,16 +54,6 @@ A typical ADR contains the following sections:
 6.  **Update Status:** Once the decision is agreed upon, change the `Status` to `Accepted`. If it's a proposal, keep it `Proposed` until finalized.
 7.  **Commit:** Commit the new ADR to version control.
 
-## Tools (Optional)
-
-For managing ADRs, you can use CLI tools like `adr-tools` ([github.com/adr/adr-tools](https://github.com/adr/adr-tools)). These tools can help with:
-
-- Generating new ADR files with the correct number and template.
-- Listing existing ADRs.
-- Automating status updates.
-
-However, these tools are not mandatory. Manually creating and maintaining Markdown files is perfectly acceptable and common.
-
 ## Best Practices
 
 - **Keep it focused:** Each ADR should address a single, significant decision.
@@ -71,5 +61,3 @@ However, these tools are not mandatory. Manually creating and maintaining Markdo
 - **Be objective:** Describe facts and rationale, not just opinions.
 - **Update status:** If a decision changes or is superseded, create a _new_ ADR to reflect the change and mark the old one as `Superseded`.
 - **Commit with code:** Ideally, an ADR is committed alongside the code or feature it describes.
-
----
