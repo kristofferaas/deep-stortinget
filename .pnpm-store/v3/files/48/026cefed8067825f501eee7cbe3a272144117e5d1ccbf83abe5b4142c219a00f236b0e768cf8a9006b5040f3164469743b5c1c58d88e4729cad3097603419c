@@ -1,0 +1,125 @@
+import { BaseChannel } from "async-channel";
+import { assert } from "convex-helpers";
+import { validate, ValidationError } from "convex-helpers/validators";
+import { internalMutationGeneric, } from "convex/server";
+import { asObjectValidator, v, } from "convex/values";
+import { createLogger } from "../component/logging.js";
+import {} from "../component/schema.js";
+import { setupEnvironment } from "./environment.js";
+import { StepExecutor } from "./step.js";
+import { StepContext } from "./stepContext.js";
+import { checkArgs } from "./validator.js";
+import {} from "@convex-dev/workpool";
+import {} from "./types.js";
+import { vWorkflowId } from "../types.js";
+import { formatErrorWithStack } from "../shared.js";
+const workflowArgs = v.object({
+    workflowId: vWorkflowId,
+    generationNumber: v.number(),
+});
+const INVALID_WORKFLOW_MESSAGE = `Invalid arguments for workflow: Did you invoke the workflow with ctx.runMutation() instead of workflow.start()?`;
+// This function is defined in the calling component but then gets passed by
+// function handle to the workflow component for execution. This function runs
+// one "poll" of the workflow, replaying its execution from the journal until
+// it blocks next.
+export function workflowMutation(component, registered, defaultWorkpoolOptions) {
+    const workpoolOptions = {
+        ...defaultWorkpoolOptions,
+        ...registered.workpoolOptions,
+    };
+    return internalMutationGeneric({
+        handler: async (ctx, args) => {
+            if (!validate(workflowArgs, args)) {
+                throw new Error(INVALID_WORKFLOW_MESSAGE);
+            }
+            const { workflowId, generationNumber } = args;
+            const { workflow, logLevel, journalEntries, ok } = await ctx.runQuery(component.journal.load, { workflowId });
+            const inProgress = journalEntries.filter(({ step }) => step.inProgress);
+            const console = createLogger(logLevel);
+            if (!ok) {
+                console.error(`Failed to load journal for ${workflowId}`);
+                await ctx.runMutation(component.workflow.complete, {
+                    workflowId,
+                    generationNumber,
+                    runResult: { kind: "failed", error: "Failed to load journal" },
+                });
+                return;
+            }
+            if (workflow.generationNumber !== generationNumber) {
+                console.error(`Invalid generation number: ${generationNumber} running workflow ${workflow.name} (${workflowId})`);
+                return;
+            }
+            if (workflow.runResult?.kind === "success") {
+                console.log(`Workflow ${workflowId} completed, returning.`);
+                return;
+            }
+            if (inProgress.length > 0) {
+                console.log(`Workflow ${workflowId} blocked by ` +
+                    inProgress
+                        .map((entry) => `${entry.step.name} (${entry._id})`)
+                        .join(", "));
+                return;
+            }
+            for (const journalEntry of journalEntries) {
+                assert(!journalEntry.step.inProgress, `Assertion failed: not blocked but have in-progress journal entry`);
+            }
+            const channel = new BaseChannel(workpoolOptions.maxParallelism ?? 10);
+            const step = new StepContext(workflowId, channel);
+            const executor = new StepExecutor(workflowId, generationNumber, ctx, component, journalEntries, channel, Date.now(), workpoolOptions);
+            setupEnvironment(executor.getGenerationState.bind(executor));
+            const handlerWorker = async () => {
+                let runResult;
+                try {
+                    checkArgs(workflow.args, registered.args);
+                    const returnValue = (await registered.handler(step, workflow.args)) ?? null;
+                    runResult = { kind: "success", returnValue };
+                    if (registered.returns) {
+                        try {
+                            validate(asObjectValidator(registered.returns), returnValue, {
+                                throw: true,
+                            });
+                        }
+                        catch (error) {
+                            const message = error instanceof ValidationError
+                                ? error.message
+                                : formatErrorWithStack(error);
+                            console.error("Workflow handler returned invalid return value: ", message);
+                            runResult = {
+                                kind: "failed",
+                                error: "Invalid return value: " + message,
+                            };
+                        }
+                    }
+                }
+                catch (error) {
+                    const message = formatErrorWithStack(error);
+                    console.error(message);
+                    runResult = { kind: "failed", error: message };
+                }
+                return { type: "handlerDone", runResult };
+            };
+            const executorWorker = async () => {
+                return await executor.run();
+            };
+            const result = await Promise.race([handlerWorker(), executorWorker()]);
+            switch (result.type) {
+                case "handlerDone": {
+                    await ctx.runMutation(component.workflow.complete, {
+                        workflowId,
+                        generationNumber,
+                        runResult: result.runResult,
+                    });
+                    break;
+                }
+                case "executorBlocked": {
+                    // Nothing to do, we already started steps in the StepExecutor.
+                    break;
+                }
+            }
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    });
+}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const console = "THIS IS A REMINDER TO USE getDefaultLogger";
+//# sourceMappingURL=workflowMutation.js.map

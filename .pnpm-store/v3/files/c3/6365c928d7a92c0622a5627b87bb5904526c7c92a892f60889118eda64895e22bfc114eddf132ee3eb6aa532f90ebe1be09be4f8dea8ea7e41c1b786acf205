@@ -1,0 +1,52 @@
+import type { QueryCtx } from "./_generated/server.js";
+export declare function getWorkflow(ctx: QueryCtx, workflowIdStr: string, expectedGenerationNumber: number | null): Promise<{
+    _id: import("convex/values").GenericId<"workflows">;
+    _creationTime: number;
+    name?: string | undefined;
+    onComplete?: {
+        context?: any;
+        fnHandle: string;
+    } | undefined;
+    logLevel?: null | undefined;
+    startedAt?: null | undefined;
+    state?: null | undefined;
+    runResult?: {
+        kind: "success";
+        returnValue: any;
+    } | {
+        kind: "failed";
+        error: string;
+    } | {
+        kind: "canceled";
+    } | undefined;
+    workflowHandle: string;
+    args: any;
+    generationNumber: number;
+}>;
+export declare function getJournalEntry(ctx: QueryCtx, journalIdStr: string): Promise<{
+    _id: import("convex/values").GenericId<"steps">;
+    _creationTime: number;
+    workflowId: import("convex/values").GenericId<"workflows">;
+    stepNumber: number;
+    step: {
+        runResult?: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined;
+        workId?: import("@convex-dev/workpool").WorkId | undefined;
+        completedAt?: number | undefined;
+        name: string;
+        args: any;
+        startedAt: number;
+        inProgress: boolean;
+        functionType: "query" | "mutation" | "action";
+        handle: string;
+        argsSize: number;
+    };
+}>;
+//# sourceMappingURL=model.d.ts.map

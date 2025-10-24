@@ -1,0 +1,120 @@
+import type { WorkpoolOptions, WorkpoolRetryOptions } from "@convex-dev/workpool";
+import { type FunctionArgs, type FunctionReference, type FunctionVisibility, type GenericDataModel, type GenericMutationCtx, type GenericQueryCtx, type RegisteredMutation, type ReturnValueForOptionalValidator } from "convex/server";
+import type { ObjectType, PropertyValidators, Validator } from "convex/values";
+import type { Step } from "../component/schema.js";
+import type { OnCompleteArgs, WorkflowId } from "../types.js";
+import type { OpaqueIds, WorkflowComponent, WorkflowStep } from "./types.js";
+export { vWorkflowId, type WorkflowId } from "../types.js";
+export type { RunOptions } from "./types.js";
+export type CallbackOptions = {
+    /**
+     * A mutation to run after the function succeeds, fails, or is canceled.
+     * The context type is for your use, feel free to provide a validator for it.
+     * e.g.
+     * ```ts
+     * export const completion = internalMutation({
+     *  args: {
+     *    workId: workIdValidator,
+     *    context: v.any(),
+     *    result: resultValidator,
+     *  },
+     *  handler: async (ctx, args) => {
+     *    console.log(args.result, "Got Context back -> ", args.context, Date.now() - args.context);
+     *  },
+     * });
+     * ```
+     */
+    onComplete?: FunctionReference<"mutation", FunctionVisibility, OnCompleteArgs> | null;
+    /**
+     * A context object to pass to the `onComplete` mutation.
+     * Useful for passing data from the enqueue site to the onComplete site.
+     */
+    context?: unknown;
+};
+export type WorkflowDefinition<ArgsValidator extends PropertyValidators, ReturnsValidator extends Validator<any, "required", any> | void = any, ReturnValue extends ReturnValueForOptionalValidator<ReturnsValidator> = any> = {
+    args?: ArgsValidator;
+    handler: (step: WorkflowStep, args: ObjectType<ArgsValidator>) => Promise<ReturnValue>;
+    returns?: ReturnsValidator;
+    workpoolOptions?: WorkpoolRetryOptions;
+};
+export type WorkflowStatus = {
+    type: "inProgress";
+    running: OpaqueIds<Step>[];
+} | {
+    type: "completed";
+} | {
+    type: "canceled";
+} | {
+    type: "failed";
+    error: string;
+};
+export declare class WorkflowManager {
+    component: WorkflowComponent;
+    options?: {
+        workpoolOptions: WorkpoolOptions;
+    } | undefined;
+    constructor(component: WorkflowComponent, options?: {
+        workpoolOptions: WorkpoolOptions;
+    } | undefined);
+    /**
+     * Define a new workflow.
+     *
+     * @param workflow - The workflow definition.
+     * @returns The workflow mutation.
+     */
+    define<ArgsValidator extends PropertyValidators, ReturnsValidator extends Validator<unknown, "required", string> | void, ReturnValue extends ReturnValueForOptionalValidator<ReturnsValidator> = any>(workflow: WorkflowDefinition<ArgsValidator, ReturnsValidator, ReturnValue>): RegisteredMutation<"internal", ObjectType<ArgsValidator>, void>;
+    /**
+     * Kick off a defined workflow.
+     *
+     * @param ctx - The Convex context.
+     * @param workflow - The workflow to start (e.g. `internal.index.exampleWorkflow`).
+     * @param args - The workflow arguments.
+     * @returns The workflow ID.
+     */
+    start<F extends FunctionReference<"mutation", "internal">>(ctx: RunMutationCtx, workflow: F, args: FunctionArgs<F>, options?: CallbackOptions & {
+        /**
+         * By default, during creation the workflow will be initiated immediately.
+         * The benefit is that you catch errors earlier (e.g. passing a bad
+         * workflow reference or catch arg validation).
+         *
+         * With `startAsync` set to true, the workflow will be created but will
+         * start asynchronously via the internal workpool.
+         * You can use this to queue up a lot of work,
+         * or make `start` return faster (you still get a workflowId back).
+         * @default false
+         */
+        startAsync?: boolean;
+        /** @deprecated Use `startAsync` instead. */
+        validateAsync?: boolean;
+    }): Promise<WorkflowId>;
+    /**
+     * Get a workflow's status.
+     *
+     * @param ctx - The Convex context.
+     * @param workflowId - The workflow ID.
+     * @returns The workflow status.
+     */
+    status(ctx: RunQueryCtx, workflowId: WorkflowId): Promise<WorkflowStatus>;
+    /**
+     * Cancel a running workflow.
+     *
+     * @param ctx - The Convex context.
+     * @param workflowId - The workflow ID.
+     */
+    cancel(ctx: RunMutationCtx, workflowId: WorkflowId): Promise<void>;
+    /**
+     * Clean up a completed workflow's storage.
+     *
+     * @param ctx - The Convex context.
+     * @param workflowId - The workflow ID.
+     * @returns - Whether the workflow's state was cleaned up.
+     */
+    cleanup(ctx: RunMutationCtx, workflowId: WorkflowId): Promise<boolean>;
+}
+type RunQueryCtx = {
+    runQuery: GenericQueryCtx<GenericDataModel>["runQuery"];
+};
+type RunMutationCtx = {
+    runMutation: GenericMutationCtx<GenericDataModel>["runMutation"];
+};
+//# sourceMappingURL=index.d.ts.map

@@ -10,14 +10,25 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("eslint:recommended"),
   {
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
     ignores: [
       "node_modules/**",
-      ".next/**",
-      "out/**",
+      ".vinxi/**",
+      ".output/**",
+      "dist/**",
       "build/**",
-      "next-env.d.ts",
+      "app/routeTree.gen.ts",
+      "convex/_generated/**",
     ],
   },
 ];

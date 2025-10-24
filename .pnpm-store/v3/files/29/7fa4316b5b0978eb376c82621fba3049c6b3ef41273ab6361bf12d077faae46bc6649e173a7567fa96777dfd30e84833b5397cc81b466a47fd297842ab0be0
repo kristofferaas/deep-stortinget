@@ -1,0 +1,39 @@
+import { BaseChannel } from "async-channel";
+import { safeFunctionName } from "./safeFunctionName.js";
+export class StepContext {
+    workflowId;
+    sender;
+    constructor(workflowId, sender) {
+        this.workflowId = workflowId;
+        this.sender = sender;
+    }
+    async runQuery(query, args, opts) {
+        return this.runFunction("query", query, args, opts);
+    }
+    async runMutation(mutation, args, opts) {
+        return this.runFunction("mutation", mutation, args, opts);
+    }
+    async runAction(action, args, opts) {
+        return this.runFunction("action", action, args, opts);
+    }
+    async runFunction(functionType, f, args, opts) {
+        let send;
+        const { name, ...rest } = opts ?? {};
+        const { retry, ...schedulerOptions } = rest;
+        const p = new Promise((resolve, reject) => {
+            send = this.sender.push({
+                name: name ?? safeFunctionName(f),
+                functionType,
+                function: f,
+                args,
+                retry,
+                schedulerOptions,
+                resolve,
+                reject,
+            });
+        });
+        await send;
+        return p;
+    }
+}
+//# sourceMappingURL=stepContext.js.map

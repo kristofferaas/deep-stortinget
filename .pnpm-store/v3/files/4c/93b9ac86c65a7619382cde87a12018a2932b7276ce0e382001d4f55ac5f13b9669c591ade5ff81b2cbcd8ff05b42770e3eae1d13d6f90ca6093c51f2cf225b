@@ -1,0 +1,489 @@
+import { type RunResult } from "@convex-dev/workpool";
+import { type Infer, type Value } from "convex/values";
+export declare function valueSize(value: Value): number;
+export declare function resultSize(result: RunResult): number;
+export declare const vOnComplete: import("convex/values").VObject<{
+    context?: any;
+    fnHandle: string;
+}, {
+    fnHandle: import("convex/values").VString<string, "required">;
+    context: import("convex/values").VAny<any, "optional", string>;
+}, "required", "fnHandle" | "context" | `context.${string}`>;
+export type OnComplete = Infer<typeof vOnComplete>;
+export declare const workflowDocument: import("convex/values").VObject<{
+    name?: string | undefined;
+    onComplete?: {
+        context?: any;
+        fnHandle: string;
+    } | undefined;
+    logLevel?: null | undefined;
+    startedAt?: null | undefined;
+    state?: null | undefined;
+    runResult?: {
+        kind: "success";
+        returnValue: any;
+    } | {
+        kind: "failed";
+        error: string;
+    } | {
+        kind: "canceled";
+    } | undefined;
+    _id: string;
+    _creationTime: number;
+    workflowHandle: string;
+    args: any;
+    generationNumber: number;
+}, {
+    name: import("convex/values").VString<string | undefined, "optional">;
+    workflowHandle: import("convex/values").VString<string, "required">;
+    args: import("convex/values").VAny<any, "required", string>;
+    onComplete: import("convex/values").VObject<{
+        context?: any;
+        fnHandle: string;
+    } | undefined, {
+        fnHandle: import("convex/values").VString<string, "required">;
+        context: import("convex/values").VAny<any, "optional", string>;
+    }, "optional", "fnHandle" | "context" | `context.${string}`>;
+    logLevel: import("convex/values").Validator<null, "optional">;
+    startedAt: import("convex/values").Validator<null, "optional">;
+    state: import("convex/values").Validator<null, "optional">;
+    runResult: import("convex/values").VUnion<{
+        kind: "success";
+        returnValue: any;
+    } | {
+        kind: "failed";
+        error: string;
+    } | {
+        kind: "canceled";
+    } | undefined, [import("convex/values").VObject<{
+        kind: "success";
+        returnValue: any;
+    }, {
+        kind: import("convex/values").VLiteral<"success", "required">;
+        returnValue: import("convex/values").VAny<any, "required", string>;
+    }, "required", "kind" | "returnValue" | `returnValue.${string}`>, import("convex/values").VObject<{
+        kind: "failed";
+        error: string;
+    }, {
+        kind: import("convex/values").VLiteral<"failed", "required">;
+        error: import("convex/values").VString<string, "required">;
+    }, "required", "kind" | "error">, import("convex/values").VObject<{
+        kind: "canceled";
+    }, {
+        kind: import("convex/values").VLiteral<"canceled", "required">;
+    }, "required", "kind">], "optional", "kind" | "returnValue" | `returnValue.${string}` | "error">;
+    generationNumber: import("convex/values").VFloat64<number, "required">;
+    _id: import("convex/values").VString<string, "required">;
+    _creationTime: import("convex/values").VFloat64<number, "required">;
+}, "required", "_id" | "_creationTime" | "name" | "workflowHandle" | "args" | "onComplete" | "logLevel" | "startedAt" | "state" | "runResult" | "generationNumber" | `args.${string}` | "onComplete.fnHandle" | "onComplete.context" | `onComplete.context.${string}` | `logLevel.${string}` | `startedAt.${string}` | `state.${string}` | "runResult.kind" | "runResult.returnValue" | `runResult.returnValue.${string}` | "runResult.error">;
+export type Workflow = Infer<typeof workflowDocument>;
+export declare const step: import("convex/values").VObject<{
+    runResult?: {
+        kind: "success";
+        returnValue: any;
+    } | {
+        kind: "failed";
+        error: string;
+    } | {
+        kind: "canceled";
+    } | undefined;
+    workId?: import("@convex-dev/workpool").WorkId | undefined;
+    completedAt?: number | undefined;
+    name: string;
+    args: any;
+    startedAt: number;
+    inProgress: boolean;
+    functionType: "query" | "mutation" | "action";
+    handle: string;
+    argsSize: number;
+}, {
+    name: import("convex/values").VString<string, "required">;
+    inProgress: import("convex/values").VBoolean<boolean, "required">;
+    workId: import("convex/values").VString<import("@convex-dev/workpool").WorkId | undefined, "optional">;
+    functionType: import("convex/values").VUnion<"query" | "mutation" | "action", import("convex/values").VLiteral<"query" | "mutation" | "action", "required">[], "required", never>;
+    handle: import("convex/values").VString<string, "required">;
+    argsSize: import("convex/values").VFloat64<number, "required">;
+    args: import("convex/values").VAny<any, "required", string>;
+    runResult: import("convex/values").VUnion<{
+        kind: "success";
+        returnValue: any;
+    } | {
+        kind: "failed";
+        error: string;
+    } | {
+        kind: "canceled";
+    } | undefined, [import("convex/values").VObject<{
+        kind: "success";
+        returnValue: any;
+    }, {
+        kind: import("convex/values").VLiteral<"success", "required">;
+        returnValue: import("convex/values").VAny<any, "required", string>;
+    }, "required", "kind" | "returnValue" | `returnValue.${string}`>, import("convex/values").VObject<{
+        kind: "failed";
+        error: string;
+    }, {
+        kind: import("convex/values").VLiteral<"failed", "required">;
+        error: import("convex/values").VString<string, "required">;
+    }, "required", "kind" | "error">, import("convex/values").VObject<{
+        kind: "canceled";
+    }, {
+        kind: import("convex/values").VLiteral<"canceled", "required">;
+    }, "required", "kind">], "optional", "kind" | "returnValue" | `returnValue.${string}` | "error">;
+    startedAt: import("convex/values").VFloat64<number, "required">;
+    completedAt: import("convex/values").VFloat64<number | undefined, "optional">;
+}, "required", "name" | "args" | "startedAt" | "runResult" | `args.${string}` | "runResult.kind" | "runResult.returnValue" | `runResult.returnValue.${string}` | "runResult.error" | "inProgress" | "workId" | "functionType" | "handle" | "argsSize" | "completedAt">;
+export type Step = Infer<typeof step>;
+export declare function journalEntrySize(entry: JournalEntry): number;
+export declare const journalDocument: import("convex/values").VObject<{
+    _id: string;
+    _creationTime: number;
+    workflowId: import("convex/values").GenericId<"workflows">;
+    stepNumber: number;
+    step: {
+        runResult?: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined;
+        workId?: import("@convex-dev/workpool").WorkId | undefined;
+        completedAt?: number | undefined;
+        name: string;
+        args: any;
+        startedAt: number;
+        inProgress: boolean;
+        functionType: "query" | "mutation" | "action";
+        handle: string;
+        argsSize: number;
+    };
+}, {
+    workflowId: import("convex/values").VId<import("convex/values").GenericId<"workflows">, "required">;
+    stepNumber: import("convex/values").VFloat64<number, "required">;
+    step: import("convex/values").VObject<{
+        runResult?: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined;
+        workId?: import("@convex-dev/workpool").WorkId | undefined;
+        completedAt?: number | undefined;
+        name: string;
+        args: any;
+        startedAt: number;
+        inProgress: boolean;
+        functionType: "query" | "mutation" | "action";
+        handle: string;
+        argsSize: number;
+    }, {
+        name: import("convex/values").VString<string, "required">;
+        inProgress: import("convex/values").VBoolean<boolean, "required">;
+        workId: import("convex/values").VString<import("@convex-dev/workpool").WorkId | undefined, "optional">;
+        functionType: import("convex/values").VUnion<"query" | "mutation" | "action", import("convex/values").VLiteral<"query" | "mutation" | "action", "required">[], "required", never>;
+        handle: import("convex/values").VString<string, "required">;
+        argsSize: import("convex/values").VFloat64<number, "required">;
+        args: import("convex/values").VAny<any, "required", string>;
+        runResult: import("convex/values").VUnion<{
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined, [import("convex/values").VObject<{
+            kind: "success";
+            returnValue: any;
+        }, {
+            kind: import("convex/values").VLiteral<"success", "required">;
+            returnValue: import("convex/values").VAny<any, "required", string>;
+        }, "required", "kind" | "returnValue" | `returnValue.${string}`>, import("convex/values").VObject<{
+            kind: "failed";
+            error: string;
+        }, {
+            kind: import("convex/values").VLiteral<"failed", "required">;
+            error: import("convex/values").VString<string, "required">;
+        }, "required", "kind" | "error">, import("convex/values").VObject<{
+            kind: "canceled";
+        }, {
+            kind: import("convex/values").VLiteral<"canceled", "required">;
+        }, "required", "kind">], "optional", "kind" | "returnValue" | `returnValue.${string}` | "error">;
+        startedAt: import("convex/values").VFloat64<number, "required">;
+        completedAt: import("convex/values").VFloat64<number | undefined, "optional">;
+    }, "required", "name" | "args" | "startedAt" | "runResult" | `args.${string}` | "runResult.kind" | "runResult.returnValue" | `runResult.returnValue.${string}` | "runResult.error" | "inProgress" | "workId" | "functionType" | "handle" | "argsSize" | "completedAt">;
+    _id: import("convex/values").VString<string, "required">;
+    _creationTime: import("convex/values").VFloat64<number, "required">;
+}, "required", "_id" | "_creationTime" | "workflowId" | "stepNumber" | "step" | "step.name" | "step.args" | "step.startedAt" | "step.runResult" | `step.args.${string}` | "step.runResult.kind" | "step.runResult.returnValue" | `step.runResult.returnValue.${string}` | "step.runResult.error" | "step.inProgress" | "step.workId" | "step.functionType" | "step.handle" | "step.argsSize" | "step.completedAt">;
+export type JournalEntry = Infer<typeof journalDocument>;
+declare const _default: import("convex/server").SchemaDefinition<{
+    config: import("convex/server").TableDefinition<import("convex/values").VObject<{
+        logLevel?: "DEBUG" | "TRACE" | "INFO" | "REPORT" | "WARN" | "ERROR" | undefined;
+        maxParallelism?: number | undefined;
+    }, {
+        logLevel: import("convex/values").VUnion<"DEBUG" | "TRACE" | "INFO" | "REPORT" | "WARN" | "ERROR" | undefined, [import("convex/values").VLiteral<"DEBUG", "required">, import("convex/values").VLiteral<"TRACE", "required">, import("convex/values").VLiteral<"INFO", "required">, import("convex/values").VLiteral<"REPORT", "required">, import("convex/values").VLiteral<"WARN", "required">, import("convex/values").VLiteral<"ERROR", "required">], "optional", never>;
+        maxParallelism: import("convex/values").VFloat64<number | undefined, "optional">;
+    }, "required", "logLevel" | "maxParallelism">, {}, {}, {}>;
+    workflows: import("convex/server").TableDefinition<import("convex/values").VObject<{
+        name?: string | undefined;
+        onComplete?: {
+            context?: any;
+            fnHandle: string;
+        } | undefined;
+        logLevel?: null | undefined;
+        startedAt?: null | undefined;
+        state?: null | undefined;
+        runResult?: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined;
+        workflowHandle: string;
+        args: any;
+        generationNumber: number;
+    }, {
+        name: import("convex/values").VString<string | undefined, "optional">;
+        workflowHandle: import("convex/values").VString<string, "required">;
+        args: import("convex/values").VAny<any, "required", string>;
+        onComplete: import("convex/values").VObject<{
+            context?: any;
+            fnHandle: string;
+        } | undefined, {
+            fnHandle: import("convex/values").VString<string, "required">;
+            context: import("convex/values").VAny<any, "optional", string>;
+        }, "optional", "fnHandle" | "context" | `context.${string}`>;
+        logLevel: import("convex/values").Validator<null, "optional">;
+        startedAt: import("convex/values").Validator<null, "optional">;
+        state: import("convex/values").Validator<null, "optional">;
+        runResult: import("convex/values").VUnion<{
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined, [import("convex/values").VObject<{
+            kind: "success";
+            returnValue: any;
+        }, {
+            kind: import("convex/values").VLiteral<"success", "required">;
+            returnValue: import("convex/values").VAny<any, "required", string>;
+        }, "required", "kind" | "returnValue" | `returnValue.${string}`>, import("convex/values").VObject<{
+            kind: "failed";
+            error: string;
+        }, {
+            kind: import("convex/values").VLiteral<"failed", "required">;
+            error: import("convex/values").VString<string, "required">;
+        }, "required", "kind" | "error">, import("convex/values").VObject<{
+            kind: "canceled";
+        }, {
+            kind: import("convex/values").VLiteral<"canceled", "required">;
+        }, "required", "kind">], "optional", "kind" | "returnValue" | `returnValue.${string}` | "error">;
+        generationNumber: import("convex/values").VFloat64<number, "required">;
+    }, "required", "name" | "workflowHandle" | "args" | "onComplete" | "logLevel" | "startedAt" | "state" | "runResult" | "generationNumber" | `args.${string}` | "onComplete.fnHandle" | "onComplete.context" | `onComplete.context.${string}` | `logLevel.${string}` | `startedAt.${string}` | `state.${string}` | "runResult.kind" | "runResult.returnValue" | `runResult.returnValue.${string}` | "runResult.error">, {}, {}, {}>;
+    steps: import("convex/server").TableDefinition<import("convex/values").VObject<{
+        workflowId: import("convex/values").GenericId<"workflows">;
+        stepNumber: number;
+        step: {
+            runResult?: {
+                kind: "success";
+                returnValue: any;
+            } | {
+                kind: "failed";
+                error: string;
+            } | {
+                kind: "canceled";
+            } | undefined;
+            workId?: import("@convex-dev/workpool").WorkId | undefined;
+            completedAt?: number | undefined;
+            name: string;
+            args: any;
+            startedAt: number;
+            inProgress: boolean;
+            functionType: "query" | "mutation" | "action";
+            handle: string;
+            argsSize: number;
+        };
+    }, {
+        workflowId: import("convex/values").VId<import("convex/values").GenericId<"workflows">, "required">;
+        stepNumber: import("convex/values").VFloat64<number, "required">;
+        step: import("convex/values").VObject<{
+            runResult?: {
+                kind: "success";
+                returnValue: any;
+            } | {
+                kind: "failed";
+                error: string;
+            } | {
+                kind: "canceled";
+            } | undefined;
+            workId?: import("@convex-dev/workpool").WorkId | undefined;
+            completedAt?: number | undefined;
+            name: string;
+            args: any;
+            startedAt: number;
+            inProgress: boolean;
+            functionType: "query" | "mutation" | "action";
+            handle: string;
+            argsSize: number;
+        }, {
+            name: import("convex/values").VString<string, "required">;
+            inProgress: import("convex/values").VBoolean<boolean, "required">;
+            workId: import("convex/values").VString<import("@convex-dev/workpool").WorkId | undefined, "optional">;
+            functionType: import("convex/values").VUnion<"query" | "mutation" | "action", import("convex/values").VLiteral<"query" | "mutation" | "action", "required">[], "required", never>;
+            handle: import("convex/values").VString<string, "required">;
+            argsSize: import("convex/values").VFloat64<number, "required">;
+            args: import("convex/values").VAny<any, "required", string>;
+            runResult: import("convex/values").VUnion<{
+                kind: "success";
+                returnValue: any;
+            } | {
+                kind: "failed";
+                error: string;
+            } | {
+                kind: "canceled";
+            } | undefined, [import("convex/values").VObject<{
+                kind: "success";
+                returnValue: any;
+            }, {
+                kind: import("convex/values").VLiteral<"success", "required">;
+                returnValue: import("convex/values").VAny<any, "required", string>;
+            }, "required", "kind" | "returnValue" | `returnValue.${string}`>, import("convex/values").VObject<{
+                kind: "failed";
+                error: string;
+            }, {
+                kind: import("convex/values").VLiteral<"failed", "required">;
+                error: import("convex/values").VString<string, "required">;
+            }, "required", "kind" | "error">, import("convex/values").VObject<{
+                kind: "canceled";
+            }, {
+                kind: import("convex/values").VLiteral<"canceled", "required">;
+            }, "required", "kind">], "optional", "kind" | "returnValue" | `returnValue.${string}` | "error">;
+            startedAt: import("convex/values").VFloat64<number, "required">;
+            completedAt: import("convex/values").VFloat64<number | undefined, "optional">;
+        }, "required", "name" | "args" | "startedAt" | "runResult" | `args.${string}` | "runResult.kind" | "runResult.returnValue" | `runResult.returnValue.${string}` | "runResult.error" | "inProgress" | "workId" | "functionType" | "handle" | "argsSize" | "completedAt">;
+    }, "required", "workflowId" | "stepNumber" | "step" | "step.name" | "step.args" | "step.startedAt" | "step.runResult" | `step.args.${string}` | "step.runResult.kind" | "step.runResult.returnValue" | `step.runResult.returnValue.${string}` | "step.runResult.error" | "step.inProgress" | "step.workId" | "step.functionType" | "step.handle" | "step.argsSize" | "step.completedAt">, {
+        workflow: ["workflowId", "stepNumber", "_creationTime"];
+        inProgress: ["step.inProgress", "workflowId", "_creationTime"];
+    }, {}, {}>;
+    onCompleteFailures: import("convex/server").TableDefinition<import("convex/values").VUnion<{
+        context: any;
+        workId: import("@convex-dev/workpool").WorkId;
+        result: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        };
+    } | {
+        error: string;
+        runResult: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        };
+        generationNumber: number;
+        workflowId: import("convex/values").GenericId<"workflows">;
+    }, [import("convex/values").VObject<{
+        context: any;
+        workId: import("@convex-dev/workpool").WorkId;
+        result: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        };
+    }, {
+        workId: import("convex/values").VString<import("@convex-dev/workpool").WorkId, "required">;
+        result: import("convex/values").VUnion<{
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        }, [import("convex/values").VObject<{
+            kind: "success";
+            returnValue: any;
+        }, {
+            kind: import("convex/values").VLiteral<"success", "required">;
+            returnValue: import("convex/values").VAny<any, "required", string>;
+        }, "required", "kind" | "returnValue" | `returnValue.${string}`>, import("convex/values").VObject<{
+            kind: "failed";
+            error: string;
+        }, {
+            kind: import("convex/values").VLiteral<"failed", "required">;
+            error: import("convex/values").VString<string, "required">;
+        }, "required", "kind" | "error">, import("convex/values").VObject<{
+            kind: "canceled";
+        }, {
+            kind: import("convex/values").VLiteral<"canceled", "required">;
+        }, "required", "kind">], "required", "kind" | "returnValue" | `returnValue.${string}` | "error">;
+        context: import("convex/values").VAny<any, "required", string>;
+    }, "required", "context" | `context.${string}` | "workId" | "result" | "result.kind" | "result.returnValue" | `result.returnValue.${string}` | "result.error">, import("convex/values").VObject<{
+        error: string;
+        runResult: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        };
+        generationNumber: number;
+        workflowId: import("convex/values").GenericId<"workflows">;
+    }, {
+        workflowId: import("convex/values").VId<import("convex/values").GenericId<"workflows">, "required">;
+        generationNumber: import("convex/values").VFloat64<number, "required">;
+        runResult: import("convex/values").VUnion<{
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        }, [import("convex/values").VObject<{
+            kind: "success";
+            returnValue: any;
+        }, {
+            kind: import("convex/values").VLiteral<"success", "required">;
+            returnValue: import("convex/values").VAny<any, "required", string>;
+        }, "required", "kind" | "returnValue" | `returnValue.${string}`>, import("convex/values").VObject<{
+            kind: "failed";
+            error: string;
+        }, {
+            kind: import("convex/values").VLiteral<"failed", "required">;
+            error: import("convex/values").VString<string, "required">;
+        }, "required", "kind" | "error">, import("convex/values").VObject<{
+            kind: "canceled";
+        }, {
+            kind: import("convex/values").VLiteral<"canceled", "required">;
+        }, "required", "kind">], "required", "kind" | "returnValue" | `returnValue.${string}` | "error">;
+        error: import("convex/values").VString<string, "required">;
+    }, "required", "error" | "runResult" | "generationNumber" | "runResult.kind" | "runResult.returnValue" | `runResult.returnValue.${string}` | "runResult.error" | "workflowId">], "required", "error" | "context" | `context.${string}` | "runResult" | "generationNumber" | "runResult.kind" | "runResult.returnValue" | `runResult.returnValue.${string}` | "runResult.error" | "workId" | "workflowId" | "result" | "result.kind" | "result.returnValue" | `result.returnValue.${string}` | "result.error">, {}, {}, {}>;
+}, true>;
+export default _default;
+//# sourceMappingURL=schema.d.ts.map

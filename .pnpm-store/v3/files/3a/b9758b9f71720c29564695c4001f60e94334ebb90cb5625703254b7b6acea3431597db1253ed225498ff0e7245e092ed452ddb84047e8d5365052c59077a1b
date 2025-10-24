@@ -1,0 +1,7 @@
+import { type RegisteredMutation } from "convex/server";
+import { type ObjectType, type PropertyValidators } from "convex/values";
+import type { WorkflowDefinition } from "./index.js";
+import { type WorkpoolOptions } from "@convex-dev/workpool";
+import { type WorkflowComponent } from "./types.js";
+export declare function workflowMutation<ArgsValidator extends PropertyValidators>(component: WorkflowComponent, registered: WorkflowDefinition<ArgsValidator>, defaultWorkpoolOptions?: WorkpoolOptions): RegisteredMutation<"internal", ObjectType<ArgsValidator>, void>;
+//# sourceMappingURL=workflowMutation.d.ts.map

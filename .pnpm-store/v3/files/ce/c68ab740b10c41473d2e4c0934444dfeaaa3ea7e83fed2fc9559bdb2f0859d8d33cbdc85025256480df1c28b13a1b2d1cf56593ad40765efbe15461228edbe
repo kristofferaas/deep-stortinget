@@ -1,0 +1,129 @@
+import { type WorkId } from "@convex-dev/workpool";
+export declare const load: import("convex/server").RegisteredQuery<"public", {
+    workflowId: import("convex/values").GenericId<"workflows">;
+}, Promise<{
+    journalEntries: {
+        _id: string;
+        _creationTime: number;
+        workflowId: import("convex/values").GenericId<"workflows">;
+        stepNumber: number;
+        step: {
+            runResult?: {
+                kind: "success";
+                returnValue: any;
+            } | {
+                kind: "failed";
+                error: string;
+            } | {
+                kind: "canceled";
+            } | undefined;
+            workId?: WorkId | undefined;
+            completedAt?: number | undefined;
+            name: string;
+            args: any;
+            startedAt: number;
+            inProgress: boolean;
+            functionType: "query" | "mutation" | "action";
+            handle: string;
+            argsSize: number;
+        };
+    }[];
+    ok: boolean;
+    workflow: {
+        _id: import("convex/values").GenericId<"workflows">;
+        _creationTime: number;
+        name?: string | undefined;
+        onComplete?: {
+            context?: any;
+            fnHandle: string;
+        } | undefined;
+        logLevel?: null | undefined;
+        startedAt?: null | undefined;
+        state?: null | undefined;
+        runResult?: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined;
+        workflowHandle: string;
+        args: any;
+        generationNumber: number;
+    };
+    logLevel: "DEBUG" | "TRACE" | "INFO" | "REPORT" | "WARN" | "ERROR";
+}>>;
+export declare const startSteps: import("convex/server").RegisteredMutation<"public", {
+    workpoolOptions?: {
+        logLevel?: "DEBUG" | "TRACE" | "INFO" | "REPORT" | "WARN" | "ERROR" | undefined;
+        maxParallelism?: number | undefined;
+        defaultRetryBehavior?: {
+            maxAttempts: number;
+            initialBackoffMs: number;
+            base: number;
+        } | undefined;
+        retryActionsByDefault?: boolean | undefined;
+    } | undefined;
+    generationNumber: number;
+    workflowId: string;
+    steps: {
+        retry?: boolean | {
+            maxAttempts: number;
+            initialBackoffMs: number;
+            base: number;
+        } | undefined;
+        schedulerOptions?: {
+            runAt?: number | undefined;
+        } | {
+            runAfter?: number | undefined;
+        } | undefined;
+        step: {
+            runResult?: {
+                kind: "success";
+                returnValue: any;
+            } | {
+                kind: "failed";
+                error: string;
+            } | {
+                kind: "canceled";
+            } | undefined;
+            workId?: WorkId | undefined;
+            completedAt?: number | undefined;
+            name: string;
+            args: any;
+            startedAt: number;
+            inProgress: boolean;
+            functionType: "query" | "mutation" | "action";
+            handle: string;
+            argsSize: number;
+        };
+    }[];
+}, Promise<{
+    _id: string;
+    _creationTime: number;
+    workflowId: import("convex/values").GenericId<"workflows">;
+    stepNumber: number;
+    step: {
+        runResult?: {
+            kind: "success";
+            returnValue: any;
+        } | {
+            kind: "failed";
+            error: string;
+        } | {
+            kind: "canceled";
+        } | undefined;
+        workId?: WorkId | undefined;
+        completedAt?: number | undefined;
+        name: string;
+        args: any;
+        startedAt: number;
+        inProgress: boolean;
+        functionType: "query" | "mutation" | "action";
+        handle: string;
+        argsSize: number;
+    };
+}[]>>;
+//# sourceMappingURL=journal.d.ts.map

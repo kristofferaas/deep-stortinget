@@ -1,0 +1,16 @@
+import { BaseChannel } from "async-channel";
+import type { FunctionReference, FunctionArgs, FunctionReturnType } from "convex/server";
+import type { StepRequest } from "./step.js";
+import type { RetryOption } from "@convex-dev/workpool";
+import type { RunOptions, WorkflowStep } from "./types.js";
+import type { WorkflowId } from "../types.js";
+export declare class StepContext implements WorkflowStep {
+    workflowId: WorkflowId;
+    private sender;
+    constructor(workflowId: WorkflowId, sender: BaseChannel<StepRequest>);
+    runQuery<Query extends FunctionReference<"query", "internal">>(query: Query, args: FunctionArgs<Query>, opts?: RunOptions): Promise<FunctionReturnType<Query>>;
+    runMutation<Mutation extends FunctionReference<"mutation", "internal">>(mutation: Mutation, args: FunctionArgs<Mutation>, opts?: RunOptions): Promise<FunctionReturnType<Mutation>>;
+    runAction<Action extends FunctionReference<"action", "internal">>(action: Action, args: FunctionArgs<Action>, opts?: RunOptions & RetryOption): Promise<FunctionReturnType<Action>>;
+    private runFunction;
+}
+//# sourceMappingURL=stepContext.d.ts.map
