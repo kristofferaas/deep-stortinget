@@ -26,8 +26,13 @@ export default defineSchema({
   // Sync cache for tracking external data and avoiding redundant updates
   syncCache: defineTable({
     checksum: v.string(), // SHA256 hash of the data
-    table: v.string(), // Table name (e.g., "cases", "votes")
-    externalId: v.number(), // External ID from Stortinget API
-    internalId: v.union(v.id("cases"), v.id("votes"), v.id("voteProposals")), // Convex _id reference to avoid lookups
+    table: v.string(), // Table name (e.g., "cases", "votes", "parties")
+    externalId: v.union(v.string(), v.number()), // External ID from Stortinget API (string for parties, number for others)
+    internalId: v.union(
+      v.id("cases"),
+      v.id("votes"),
+      v.id("voteProposals"),
+      v.id("parties"),
+    ), // Convex _id reference to avoid lookups
   }).index("by_table_and_external_id", ["table", "externalId"]),
 });
