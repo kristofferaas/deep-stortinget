@@ -43,6 +43,53 @@ export const latestCases = query({
   },
 });
 
+export const feedCases = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      id: v.number(),
+      type: v.string(),
+      tittel: v.string(),
+      korttittel: v.string(),
+      status: v.string(),
+      dokumentgruppe: v.string(),
+      sist_oppdatert_dato: v.string(),
+      sak_fremmet_id: v.number(),
+      henvisning: v.optional(v.string()),
+      votes: v.number(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const docs = await ctx.db
+      .query("cases")
+      .withIndex("by_last_updated_date")
+      .order("desc")
+      .take(25);
+
+    const votesForCases = await Promise.all(
+      docs.map((doc) =>
+        ctx.db
+          .query("votes")
+          .withIndex("by_case_id", (q) => q.eq("sak_id", doc.id))
+          .collect(),
+      ),
+    );
+
+    return docs.map((doc, index) => ({
+      id: doc.id,
+      type: doc.type,
+      tittel: doc.tittel,
+      korttittel: doc.korttittel,
+      status: doc.status,
+      dokumentgruppe: doc.dokumentgruppe,
+      sist_oppdatert_dato: doc.sist_oppdatert_dato,
+      sak_fremmet_id: doc.sak_fremmet_id,
+      henvisning: doc.henvisning,
+      votes: votesForCases[index]?.length ?? 0,
+    }));
+  },
+});
+
 export const paginatedCases = query({
   args: {
     page: v.number(),
@@ -130,8 +177,6 @@ export const getCaseById = query({
       .query("votes")
       .withIndex("by_case_id", (q) => q.eq("sak_id", args.id))
       .collect();
-
-    console.log("For case", args.id, "found", votes.length, "votes");
 
     const serializedCase = {
       id: doc.id,
