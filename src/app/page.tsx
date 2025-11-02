@@ -13,12 +13,16 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AsciiSpinner from "./ascii-spinner";
+import { InferQueryResult } from "@/lib/utils";
+
+type FeedCases = InferQueryResult<typeof api.stortinget.cases.feedCases>;
+type FeedCase = FeedCases[number];
 
 export default function Home() {
   const cases = useQuery(api.stortinget.cases.feedCases);
 
   // Map status to badge variant
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: FeedCase["status"]) => {
     switch (status) {
       case "behandlet":
         return "secondary";
@@ -33,11 +37,11 @@ export default function Home() {
   };
 
   // Format status text for display
-  const formatStatus = (status: string) => {
+  const formatStatus = (status: FeedCase["status"]) => {
     switch (status) {
       case "varslet":
         return "Varslet";
-      case "motatt":
+      case "mottatt":
         return "Mottatt";
       case "til_behandling":
         return "Til behandling";
@@ -48,12 +52,12 @@ export default function Home() {
       case "bortfalt":
         return "Bortfalt";
       default:
-        throw new Error("Unknown status");
+        throw new Error("Unknown status: " + status);
     }
   };
 
   // Format type text for display
-  const formatType = (type: string): string => {
+  const formatType = (type: FeedCase["type"]) => {
     switch (type) {
       case "budsjett":
         return "Budsjett";
@@ -62,7 +66,7 @@ export default function Home() {
       case "alminneligsak":
         return "Alminnelig sak";
       default:
-        throw new Error("Unknown format type");
+        throw new Error("Unknown format type: " + type);
     }
   };
 
