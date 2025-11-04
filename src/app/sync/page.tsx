@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
@@ -11,14 +12,26 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AsciiSpinner from "../ascii-spinner";
+import { InferQueryResult } from "@/lib/utils";
+
+type SyncStatus = NonNullable<
+  InferQueryResult<typeof api.sync.workflow.getSyncStatus>
+>;
 
 export default function SyncPage() {
   const syncStatus = useQuery(api.sync.workflow.getSyncStatus);
+  const [now, setNow] = useState(Date.now());
+
+  // Update timer every second when sync is running
+  useEffect(() => {
+    if (syncStatus?.status === "started") {
+      const interval = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [syncStatus?.status]);
 
   // Map status to badge variant
-  const getStatusVariant = (
-    status: "idle" | "started" | "success" | "error" | "canceled",
-  ) => {
+  const getStatusVariant = (status: SyncStatus["status"]) => {
     switch (status) {
       case "success":
         return "secondary";
@@ -33,9 +46,7 @@ export default function SyncPage() {
   };
 
   // Format status text for display
-  const formatStatus = (
-    status: "idle" | "started" | "success" | "error" | "canceled",
-  ) => {
+  const formatStatus = (status: SyncStatus["status"]) => {
     switch (status) {
       case "idle":
         return "Idle";
@@ -107,7 +118,10 @@ export default function SyncPage() {
     );
   }
 
-  const duration = formatDuration(syncStatus.startedAt, syncStatus.finishedAt);
+  const duration = formatDuration(
+    syncStatus.startedAt,
+    syncStatus.status === "started" ? now : syncStatus.finishedAt,
+  );
   const startTime = formatDateTime(syncStatus.startedAt);
 
   return (
