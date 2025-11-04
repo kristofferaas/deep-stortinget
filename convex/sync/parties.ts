@@ -2,7 +2,12 @@ import { v } from "convex/values";
 import { z } from "zod";
 import { internal } from "../_generated/api";
 import { internalAction, internalMutation } from "../_generated/server";
-import { stortingetDtoSchema, stripStortingetDtoMetadata } from "./helpers";
+import {
+  stortingetDtoSchema,
+  stripStortingetDtoMetadata,
+  computeChecksum,
+  batcher,
+} from "./helpers";
 import { partyValidator } from "./validators";
 
 export const partySchema = stortingetDtoSchema.extend({
@@ -18,6 +23,7 @@ const partyResponseSchema = stortingetDtoSchema.extend({
 });
 
 export const syncParties = internalAction({
+  returns: v.array(v.string()),
   handler: async (ctx) => {
     const baseUrl =
       process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
@@ -32,35 +38,67 @@ export const syncParties = internalAction({
     const json = await response.json();
     const parsed = partyResponseSchema.parse(json);
 
-    await ctx.runMutation(internal.sync.parties.upsertParties, {
-      parties: parsed.partier_liste.map(stripStortingetDtoMetadata),
+    // Compute checksums for all parties
+    const partiesWithChecksums = await Promise.all(
+      parsed.partier_liste.map(async (p) => {
+        const stripped = stripStortingetDtoMetadata(p);
+        const checksum = await computeChecksum(stripped);
+        return { id: p.id, data: stripped, checksum: checksum };
+      }),
+    );
+
+    // Process parties in batches
+    await batcher(partiesWithChecksums, async (batch) => {
+      return await ctx.runMutation(internal.sync.parties.batchUpsertParties, {
+        batch,
+      });
     });
+
+    return partiesWithChecksums.map((p) => p.id);
   },
 });
 
-export const upsertParties = internalMutation({
-  args: {
-    parties: v.array(partyValidator),
-  },
+export const batchUpsertParties = internalMutation({
+  args: v.object({
+    batch: v.array(
+      v.object({
+        id: v.string(),
+        data: partyValidator,
+        checksum: v.string(),
+      }),
+    ),
+  }),
   handler: async (ctx, args) => {
-    const partyIds: string[] = [];
-    for (const party of args.parties) {
-      const existing = await ctx.db
-        .query("parties")
-        .withIndex("by_party_id", (q) => q.eq("id", party.id))
+    for (const dto of args.batch) {
+      // First, check if a sync cache entry exists
+      // This only queries the index, not the full document (cheap!)
+      const cachedSync = await ctx.db
+        .query("syncCache")
+        .withIndex("by_table_and_external_id", (q) =>
+          q.eq("table", "parties").eq("externalId", dto.id),
+        )
         .unique();
 
-      if (existing) {
-        // Toggle representert_parti if it has changed
-        if (existing.representert_parti !== party.representert_parti) {
-          await ctx.db.replace(existing._id, party);
-          partyIds.push(party.id);
-        }
+      if (cachedSync && cachedSync.checksum === dto.checksum) {
+        // Checksum matches - skip (no database read or write needed!)
+        continue;
+      }
+
+      if (!cachedSync) {
+        // New record - insert party and sync cache entry
+        const partyId = await ctx.db.insert("parties", dto.data);
+        await ctx.db.insert("syncCache", {
+          table: "parties",
+          externalId: dto.id,
+          checksum: dto.checksum,
+          internalId: partyId,
+        });
       } else {
-        await ctx.db.insert("parties", party);
-        partyIds.push(party.id);
+        // Checksum changed - update party using stored internalId (no lookup needed!)
+        await ctx.db.replace(cachedSync.internalId, dto.data);
+        await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
       }
     }
-    return partyIds;
+    return null;
   },
 });
