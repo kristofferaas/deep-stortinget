@@ -179,6 +179,25 @@ export const updateStatus = internalMutation({
 });
 
 export const getSyncStatus = query({
+  args: {},
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("sync"),
+      _creationTime: v.number(),
+      key: v.string(),
+      status: v.union(
+        v.literal("idle"),
+        v.literal("started"),
+        v.literal("success"),
+        v.literal("error"),
+        v.literal("canceled"),
+      ),
+      message: v.optional(v.string()),
+      startedAt: v.optional(v.number()),
+      finishedAt: v.optional(v.number()),
+    }),
+  ),
   handler: async (ctx) => {
     const currentStatus = await ctx.db
       .query("sync")
