@@ -53,13 +53,21 @@ export default function Home() {
     statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
   });
 
-  // Reset when filters change
+  // Reset when filters change (using stable keys to avoid unnecessary resets)
   useEffect(() => {
     setAllCases([]);
     setCursor(null);
     setIsDone(false);
     hasInitialized.current = false;
-  }, [search, selectedTypes, selectedStatuses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    search,
+    // Use JSON.stringify for stable array comparison
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    JSON.stringify(selectedTypes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    JSON.stringify(selectedStatuses),
+  ]);
 
   // Accumulate pages as they load
   useEffect(() => {

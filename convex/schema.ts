@@ -17,10 +17,6 @@ export default defineSchema({
     .searchIndex("search_title", {
       searchField: "tittel",
       filterFields: ["type", "status"],
-    })
-    .searchIndex("search_short_title", {
-      searchField: "korttittel",
-      filterFields: ["type", "status"],
     }),
   votes: defineTable(voteValidator)
     .index("by_vote_id", ["votering_id"])
