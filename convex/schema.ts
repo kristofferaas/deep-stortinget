@@ -13,7 +13,15 @@ export default defineSchema({
   hearings: defineTable(hearingValidator).index("by_hearing_id", ["id"]),
   cases: defineTable(caseValidator)
     .index("by_case_id", ["id"])
-    .index("by_last_updated_date", ["sist_oppdatert_dato"]),
+    .index("by_last_updated_date", ["sist_oppdatert_dato"])
+    .searchIndex("search_title", {
+      searchField: "tittel",
+      filterFields: ["type", "status"],
+    })
+    .searchIndex("search_short_title", {
+      searchField: "korttittel",
+      filterFields: ["type", "status"],
+    }),
   votes: defineTable(voteValidator)
     .index("by_vote_id", ["votering_id"])
     .index("by_case_id", ["sak_id"]),
