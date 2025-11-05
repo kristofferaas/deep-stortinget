@@ -16,6 +16,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import AsciiSpinner from "./ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
+import { SearchHeader } from "@/components/search-header";
+import {
+  FilterPanel,
+  CaseType,
+  CaseStatus,
+} from "@/components/filter-panel";
+import { useScrollDirection } from "@/hooks/use-scroll-direction";
 
 type PaginatedCases = InferQueryResult<
   typeof api.stortinget.cases.paginatedCases
@@ -29,9 +36,30 @@ export default function Home() {
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const hasInitialized = useRef(false);
 
+  // Filter and search state
+  const [search, setSearch] = useState("");
+  const [selectedTypes, setSelectedTypes] = useState<CaseType[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<CaseStatus[]>([]);
+
+  // Scroll direction for animations
+  const scrollDirection = useScrollDirection({ threshold: 50 });
+  const showHeader = scrollDirection === "up" || scrollDirection === null;
+  const showFilters = scrollDirection === "up" || scrollDirection === null;
+
   const result = useQuery(api.stortinget.cases.paginatedCases, {
     paginationOpts: { numItems: 25, cursor },
+    search: search || undefined,
+    types: selectedTypes.length > 0 ? selectedTypes : undefined,
+    statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
   });
+
+  // Reset when filters change
+  useEffect(() => {
+    setAllCases([]);
+    setCursor(null);
+    setIsDone(false);
+    hasInitialized.current = false;
+  }, [search, selectedTypes, selectedStatuses]);
 
   // Accumulate pages as they load
   useEffect(() => {
@@ -131,25 +159,47 @@ export default function Home() {
 
   if (!result && allCases.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <AsciiSpinner />
-      </div>
+      <>
+        <SearchHeader value={search} onChange={setSearch} visible={showHeader} />
+        <div className="min-h-screen flex items-center justify-center pt-20">
+          <AsciiSpinner />
+        </div>
+        <FilterPanel
+          selectedTypes={selectedTypes}
+          selectedStatuses={selectedStatuses}
+          onTypesChange={setSelectedTypes}
+          onStatusesChange={setSelectedStatuses}
+          visible={showFilters}
+        />
+      </>
     );
   }
 
   if (allCases.length === 0 && isDone) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Ingen saker funnet</p>
-      </div>
+      <>
+        <SearchHeader value={search} onChange={setSearch} visible={showHeader} />
+        <div className="min-h-screen flex items-center justify-center pt-20">
+          <p className="text-muted-foreground">Ingen saker funnet</p>
+        </div>
+        <FilterPanel
+          selectedTypes={selectedTypes}
+          selectedStatuses={selectedStatuses}
+          onTypesChange={setSelectedTypes}
+          onStatusesChange={setSelectedStatuses}
+          visible={showFilters}
+        />
+      </>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8">Siste saker</h1>
-      </div>
+      <SearchHeader value={search} onChange={setSearch} visible={showHeader} />
+
+      {/* Spacer for fixed header */}
+      <div className="h-20" />
+
       <div className="container mx-auto px-4 max-w-4xl">
         <div
           ref={listRef}
@@ -229,6 +279,14 @@ export default function Home() {
           })}
         </div>
       </div>
+
+      <FilterPanel
+        selectedTypes={selectedTypes}
+        selectedStatuses={selectedStatuses}
+        onTypesChange={setSelectedTypes}
+        onStatusesChange={setSelectedStatuses}
+        visible={showFilters}
+      />
     </div>
   );
 }

@@ -6,6 +6,28 @@ import { caseValidator, voteValidator } from "../sync/validators";
 export const paginatedCases = query({
   args: {
     paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+    types: v.optional(
+      v.array(
+        v.union(
+          v.literal("budsjett"),
+          v.literal("lovsak"),
+          v.literal("alminneligsak"),
+        ),
+      ),
+    ),
+    statuses: v.optional(
+      v.array(
+        v.union(
+          v.literal("varslet"),
+          v.literal("mottatt"),
+          v.literal("til_behandling"),
+          v.literal("behandlet"),
+          v.literal("trukket"),
+          v.literal("bortfalt"),
+        ),
+      ),
+    ),
   },
   returns: v.object({
     page: v.array(
@@ -26,14 +48,57 @@ export const paginatedCases = query({
     continueCursor: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
-    const result = await ctx.db
+    let query = ctx.db
       .query("cases")
       .withIndex("by_last_updated_date")
-      .order("desc")
-      .paginate(args.paginationOpts);
+      .order("desc");
+
+    // Apply type and status filters using Convex filter
+    if (args.types || args.statuses) {
+      query = query.filter((q) => {
+        let conditions = [];
+
+        // Type filter
+        if (args.types && args.types.length > 0) {
+          const typeConditions = args.types.map((type) =>
+            q.eq(q.field("type"), type),
+          );
+          conditions.push(
+            typeConditions.reduce((acc, curr) => q.or(acc, curr)),
+          );
+        }
+
+        // Status filter
+        if (args.statuses && args.statuses.length > 0) {
+          const statusConditions = args.statuses.map((status) =>
+            q.eq(q.field("status"), status),
+          );
+          conditions.push(
+            statusConditions.reduce((acc, curr) => q.or(acc, curr)),
+          );
+        }
+
+        return conditions.length > 0
+          ? conditions.reduce((acc, curr) => q.and(acc, curr))
+          : q.eq(true, true);
+      });
+    }
+
+    const result = await query.paginate(args.paginationOpts);
+
+    // Apply search filter in memory (Convex doesn't support substring search in filters)
+    let filteredPage = result.page;
+    if (args.search) {
+      const searchLower = args.search.toLowerCase();
+      filteredPage = result.page.filter(
+        (doc) =>
+          doc.tittel.toLowerCase().includes(searchLower) ||
+          doc.korttittel.toLowerCase().includes(searchLower),
+      );
+    }
 
     const votesForCases = await Promise.all(
-      result.page.map((doc) =>
+      filteredPage.map((doc) =>
         ctx.db
           .query("votes")
           .withIndex("by_case_id", (q) => q.eq("sak_id", doc.id))
@@ -41,7 +106,7 @@ export const paginatedCases = query({
       ),
     );
 
-    const cases = result.page.map((doc, index) => ({
+    const cases = filteredPage.map((doc, index) => ({
       id: doc.id,
       type: doc.type,
       tittel: doc.tittel,
