@@ -5,3 +5,4 @@ convex/_generated/
 **/.next/
 **/dist/
 **/build/
+pnpm-lock.yaml
