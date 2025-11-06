@@ -17,6 +17,7 @@ import type * as sync_validators from "../sync/validators.js";
 import type * as sync_votes from "../sync/votes.js";
 import type * as sync_votesProposals from "../sync/votesProposals.js";
 import type * as sync_workflow from "../sync/workflow.js";
+import type * as syncSettings from "../syncSettings.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "sync/votes": typeof sync_votes;
   "sync/votesProposals": typeof sync_votesProposals;
   "sync/workflow": typeof sync_workflow;
+  syncSettings: typeof syncSettings;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
@@ -55,6 +57,34 @@ export declare const internal: FilterApi<
 >;
 
 export declare const components: {
+  crons: {
+    public: {
+      register: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          name?: string;
+          functionHandle: string;
+          args: Record<string, any>;
+          schedule: { kind: "interval"; ms: number } | { kind: "cron"; cronspec: string; tz?: string };
+        },
+        any
+      >;
+      list: FunctionReference<"query", "internal", {}, any[]>;
+      get: FunctionReference<
+        "query",
+        "internal",
+        { identifier: { id: string } | { name: string } },
+        any | null
+      >;
+      del: FunctionReference<
+        "mutation",
+        "internal",
+        { identifier: { id: string } | { name: string } },
+        void
+      >;
+    };
+  };
   workflow: {
     journal: {
       load: FunctionReference<

@@ -69,16 +69,16 @@ export const enableNightlySync = internalMutation({
     const crons = new Crons(components.crons);
 
     // Check if cron already exists
-    const existingCron = await crons.get(ctx, CRON_NAME);
+    const existingCron = await crons.get(ctx, { name: CRON_NAME });
 
     if (!existingCron) {
       // Register the cron job
       await crons.register(
         ctx,
-        CRON_NAME,
         { kind: "cron", cronspec: CRON_SCHEDULE },
         internal.sync.workflow.startWorkflow,
         {},
+        CRON_NAME,
       );
       console.log("Nightly sync cron registered");
     }
@@ -124,10 +124,10 @@ export const disableNightlySync = internalMutation({
     const crons = new Crons(components.crons);
 
     // Check if cron exists and delete it
-    const existingCron = await crons.get(ctx, CRON_NAME);
+    const existingCron = await crons.get(ctx, { name: CRON_NAME });
 
     if (existingCron) {
-      await crons.delete(ctx, CRON_NAME);
+      await crons.delete(ctx, { name: CRON_NAME });
       console.log("Nightly sync cron unregistered");
     }
 

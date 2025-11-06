@@ -151,7 +151,9 @@ export default function SyncPage() {
           {/* Sync Settings Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Automatisk synkronisering</CardTitle>
+              <CardTitle className="text-xl">
+                Automatisk synkronisering
+              </CardTitle>
               <CardDescription>
                 Konfigurer automatisk daglig synkronisering fra Stortinget API
               </CardDescription>
