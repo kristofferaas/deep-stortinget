@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import {
   Card,
@@ -14,6 +15,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import AsciiSpinner from "./ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
 
@@ -23,11 +26,16 @@ type PaginatedCases = InferQueryResult<
 type FeedCase = PaginatedCases["page"][number];
 
 export default function Home() {
+  const router = useRouter();
   const [allCases, setAllCases] = useState<FeedCase[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const hasInitialized = useRef(false);
+  const [chatInput, setChatInput] = useState("");
+  const [isCreatingThread, setIsCreatingThread] = useState(false);
+
+  const createThread = useMutation(api.chat.createThread);
 
   const result = useQuery(api.stortinget.cases.paginatedCases, {
     paginationOpts: { numItems: 25, cursor },
@@ -129,6 +137,23 @@ export default function Home() {
     }
   };
 
+  // Handle chat submission
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || isCreatingThread) return;
+
+    setIsCreatingThread(true);
+    try {
+      const threadId = await createThread({
+        initialMessage: chatInput.trim(),
+      });
+      router.push(`/chat/${threadId}`);
+    } catch (error) {
+      console.error("Failed to create thread:", error);
+      setIsCreatingThread(false);
+    }
+  };
+
   if (!result && allCases.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -146,7 +171,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold mb-8">Siste saker</h1>
       </div>
@@ -227,6 +252,24 @@ export default function Home() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Fixed chat input at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
+          <form onSubmit={handleChatSubmit} className="flex gap-2">
+            <Input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask a question about Norwegian parliamentary data..."
+              disabled={isCreatingThread}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={isCreatingThread || !chatInput.trim()}>
+              {isCreatingThread ? "Starting..." : "Send"}
+            </Button>
+          </form>
         </div>
       </div>
     </div>
