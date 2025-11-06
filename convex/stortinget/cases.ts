@@ -47,83 +47,93 @@ export const paginatedCases = query({
     continueCursor: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
-    // Select the most efficient index based on which filters are applied
-    // This avoids full table scans and uses compound indexes where possible
-    const hasSingleType = args.types?.length === 1;
+    // Select the best index based on filters (Convex best practice: index before pagination)
+    // For optimal performance, we use indexes with .eq() for single selections
+    // Multiple selections require .filter() which is less efficient but necessary
+
+    const singleType = args.types?.length === 1 ? args.types[0] : null;
+    const singleStatus = args.statuses?.length === 1 ? args.statuses[0] : null;
     const hasMultipleTypes = args.types && args.types.length > 1;
-    const hasSingleStatus = args.statuses?.length === 1;
     const hasMultipleStatuses = args.statuses && args.statuses.length > 1;
 
-    let query;
+    let result;
 
-    // Case 1: Single type AND single status - use compound index
-    if (hasSingleType && hasSingleStatus) {
-      query = ctx.db
+    // Optimal case: Single type + single status
+    if (singleType && singleStatus) {
+      result = await ctx.db
         .query("cases")
         .withIndex("by_type_and_status_and_last_updated_date", (q) =>
-          q.eq("type", args.types![0]).eq("status", args.statuses![0]),
+          q.eq("type", singleType).eq("status", singleStatus),
         )
-        .order("desc");
+        .order("desc")
+        .paginate(args.paginationOpts);
     }
-    // Case 2: Single type only - use type index
-    else if (hasSingleType && !args.statuses) {
-      query = ctx.db
+    // Optimal case: Single type only
+    else if (singleType && !args.statuses) {
+      result = await ctx.db
         .query("cases")
         .withIndex("by_type_and_last_updated_date", (q) =>
-          q.eq("type", args.types![0]),
+          q.eq("type", singleType),
         )
-        .order("desc");
+        .order("desc")
+        .paginate(args.paginationOpts);
     }
-    // Case 3: Single status only - use status index
-    else if (hasSingleStatus && !args.types) {
-      query = ctx.db
+    // Optimal case: Single status only
+    else if (singleStatus && !args.types) {
+      result = await ctx.db
         .query("cases")
         .withIndex("by_status_and_last_updated_date", (q) =>
-          q.eq("status", args.statuses![0]),
+          q.eq("status", singleStatus),
         )
-        .order("desc");
+        .order("desc")
+        .paginate(args.paginationOpts);
     }
-    // Case 4: Single type + multiple statuses - use type index, filter statuses
-    else if (hasSingleType && hasMultipleStatuses) {
-      query = ctx.db
+    // Sub-optimal case: Multiple selections or mixed filters
+    // Note: Using .filter() after index is less efficient for pagination
+    // but necessary to support OR conditions with multiple values
+    else if (singleType && hasMultipleStatuses) {
+      // Use type index, filter statuses in memory
+      result = await ctx.db
         .query("cases")
         .withIndex("by_type_and_last_updated_date", (q) =>
-          q.eq("type", args.types![0]),
+          q.eq("type", singleType),
         )
         .order("desc")
         .filter((q) => {
-          const statusConditions = args.statuses!.map((status) =>
+          const conditions = args.statuses!.map((status) =>
             q.eq(q.field("status"), status),
           );
-          return statusConditions.reduce((acc, curr) => q.or(acc, curr));
-        });
+          return conditions.reduce((acc, curr) => q.or(acc, curr));
+        })
+        .paginate(args.paginationOpts);
     }
-    // Case 5: Multiple types + single status - use status index, filter types
-    else if (hasMultipleTypes && hasSingleStatus) {
-      query = ctx.db
+    else if (singleStatus && hasMultipleTypes) {
+      // Use status index, filter types in memory
+      result = await ctx.db
         .query("cases")
         .withIndex("by_status_and_last_updated_date", (q) =>
-          q.eq("status", args.statuses![0]),
+          q.eq("status", singleStatus),
         )
         .order("desc")
         .filter((q) => {
-          const typeConditions = args.types!.map((type) =>
+          const conditions = args.types!.map((type) =>
             q.eq(q.field("type"), type),
           );
-          return typeConditions.reduce((acc, curr) => q.or(acc, curr));
-        });
+          return conditions.reduce((acc, curr) => q.or(acc, curr));
+        })
+        .paginate(args.paginationOpts);
     }
-    // Case 6: Multiple types + multiple statuses OR no filters
-    // Use date index and filter both (less efficient but supports all combinations)
+    // No filters or complex multi-value filters
     else {
-      query = ctx.db
+      let query = ctx.db
         .query("cases")
         .withIndex("by_last_updated_date")
         .order("desc");
 
+      // Apply filters if present
       if (args.types || args.statuses) {
         query = query.filter((q) => {
-          let conditions = [];
+          const conditions = [];
 
           if (args.types && args.types.length > 0) {
             const typeConditions = args.types.map((type) =>
@@ -143,14 +153,12 @@ export const paginatedCases = query({
             );
           }
 
-          return conditions.length > 0
-            ? conditions.reduce((acc, curr) => q.and(acc, curr))
-            : q.eq(true, true);
+          return conditions.reduce((acc, curr) => q.and(acc, curr));
         });
       }
-    }
 
-    const result = await query.paginate(args.paginationOpts);
+      result = await query.paginate(args.paginationOpts);
+    }
 
     const votesForCases = await Promise.all(
       result.page.map((doc) =>
