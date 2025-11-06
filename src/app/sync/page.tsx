@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
   Card,
@@ -11,6 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import AsciiSpinner from "../ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
 
@@ -20,7 +22,11 @@ type SyncStatus = NonNullable<
 
 export default function SyncPage() {
   const syncStatus = useQuery(api.sync.workflow.getSyncStatus);
+  const syncEnabled = useQuery(api.syncSettings.getSyncEnabled);
+  const syncSettings = useQuery(api.syncSettings.getSyncSettings);
+  const toggleSync = useMutation(api.syncSettings.toggleSyncEnabled);
   const [now, setNow] = useState(Date.now());
+  const [isToggling, setIsToggling] = useState(false);
 
   // Update timer every second when sync is running
   useEffect(() => {
@@ -92,7 +98,19 @@ export default function SyncPage() {
     });
   };
 
-  if (syncStatus === undefined) {
+  // Handle toggle sync
+  const handleToggleSync = async (enabled: boolean) => {
+    setIsToggling(true);
+    try {
+      await toggleSync({ enabled });
+    } catch (error) {
+      console.error("Failed to toggle sync:", error);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  if (syncStatus === undefined || syncEnabled === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <AsciiSpinner />
@@ -130,6 +148,45 @@ export default function SyncPage() {
         <h1 className="text-3xl font-bold mb-8">Synkroniseringsstatus</h1>
 
         <div className="flex flex-col gap-4">
+          {/* Sync Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Automatisk synkronisering</CardTitle>
+              <CardDescription>
+                Konfigurer automatisk daglig synkronisering fra Stortinget API
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="sync-toggle" className="text-sm font-medium">
+                    Nattlig synkronisering
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {syncEnabled
+                      ? "Synkronisering kjører daglig kl. 03:00 UTC"
+                      : "Automatisk synkronisering er deaktivert"}
+                  </p>
+                </div>
+                <Switch
+                  id="sync-toggle"
+                  checked={syncEnabled}
+                  onCheckedChange={handleToggleSync}
+                  disabled={isToggling}
+                />
+              </div>
+              {syncSettings && syncSettings.updatedAt && (
+                <div className="flex flex-col gap-1 pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Sist oppdatert:{" "}
+                    {formatDateTime(syncSettings.updatedAt) || "Ukjent"}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Status Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -166,14 +223,6 @@ export default function SyncPage() {
                   </p>
                 </div>
               )}
-
-              {!syncStatus.startedAt &&
-                syncStatus.status === "idle" &&
-                !syncStatus.message && (
-                  <p className="text-sm text-muted-foreground">
-                    Synkronisering kjører daglig kl. 03:00 UTC.
-                  </p>
-                )}
             </CardContent>
           </Card>
         </div>

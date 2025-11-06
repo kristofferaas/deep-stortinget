@@ -23,6 +23,15 @@ export default defineSchema({
   parties: defineTable(partyValidator).index("by_party_id", ["id"]),
   // Sync metadata table
   sync: defineTable(syncStatusValidator).index("by_key", ["key"]),
+  // Sync settings table for storing cron configuration
+  syncSettings: defineTable({
+    key: v.string(), // Unique key (e.g., "nightly_sync_cron_id")
+    cronId: v.optional(v.string()), // The cron job ID from the crons component
+    enabled: v.boolean(), // Whether the sync is enabled
+    cronSchedule: v.optional(v.string()), // The cron schedule (e.g., "0 3 * * *")
+    updatedAt: v.number(), // Timestamp of last update
+    updatedBy: v.optional(v.string()), // User who made the change (if applicable)
+  }).index("by_key", ["key"]),
   // Sync cache for tracking external data and avoiding redundant updates
   syncCache: defineTable({
     checksum: v.string(), // SHA256 hash of the data
