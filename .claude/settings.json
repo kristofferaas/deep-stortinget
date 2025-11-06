@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pnpm run format:check && pnpm run lint && pnpm run type-check && pnpm run knip"
+            "command": "./.claude/hooks/type-check-hook.sh"
           }
         ]
       }
