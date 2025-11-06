@@ -16,7 +16,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import AsciiSpinner from "./ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
-import { SearchHeader } from "@/components/search-header";
 import {
   FilterPanel,
   CaseType,
@@ -36,19 +35,16 @@ export default function Home() {
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const hasInitialized = useRef(false);
 
-  // Filter and search state
-  const [search, setSearch] = useState("");
+  // Filter state
   const [selectedTypes, setSelectedTypes] = useState<CaseType[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<CaseStatus[]>([]);
 
   // Scroll direction for animations
   const scrollDirection = useScrollDirection({ threshold: 50 });
-  const showHeader = scrollDirection === "up" || scrollDirection === null;
   const showFilters = scrollDirection === "up" || scrollDirection === null;
 
   const result = useQuery(api.stortinget.cases.paginatedCases, {
     paginationOpts: { numItems: 25, cursor },
-    search: search || undefined,
     types: selectedTypes.length > 0 ? selectedTypes : undefined,
     statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
   });
@@ -61,7 +57,6 @@ export default function Home() {
     hasInitialized.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    search,
     // Use JSON.stringify for stable array comparison
     // eslint-disable-next-line react-hooks/exhaustive-deps
     JSON.stringify(selectedTypes),
@@ -168,8 +163,7 @@ export default function Home() {
   if (!result && allCases.length === 0) {
     return (
       <>
-        <SearchHeader value={search} onChange={setSearch} visible={showHeader} />
-        <div className="min-h-screen flex items-center justify-center pt-20">
+        <div className="min-h-screen flex items-center justify-center">
           <AsciiSpinner />
         </div>
         <FilterPanel
@@ -186,8 +180,7 @@ export default function Home() {
   if (allCases.length === 0 && isDone) {
     return (
       <>
-        <SearchHeader value={search} onChange={setSearch} visible={showHeader} />
-        <div className="min-h-screen flex items-center justify-center pt-20">
+        <div className="min-h-screen flex items-center justify-center">
           <p className="text-muted-foreground">Ingen saker funnet</p>
         </div>
         <FilterPanel
@@ -203,11 +196,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SearchHeader value={search} onChange={setSearch} visible={showHeader} />
-
-      {/* Spacer for fixed header */}
-      <div className="h-20" />
-
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 className="text-3xl font-bold mb-8">Siste saker</h1>
+      </div>
       <div className="container mx-auto px-4 max-w-4xl">
         <div
           ref={listRef}

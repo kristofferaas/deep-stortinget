@@ -6,7 +6,6 @@ import { caseValidator, voteValidator } from "../sync/validators";
 export const paginatedCases = query({
   args: {
     paginationOpts: paginationOptsValidator,
-    search: v.optional(v.string()),
     types: v.optional(
       v.array(
         v.union(
@@ -48,117 +47,7 @@ export const paginatedCases = query({
     continueCursor: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
-    // When search is provided, use full-text search index
-    // Trade-off: Search queries use offset-based pagination (limited to ~100 results)
-    // while non-search queries use efficient cursor-based pagination (unlimited).
-    // This is necessary because full-text search with in-memory filtering
-    // requires loading all matching results to paginate correctly.
-    if (args.search) {
-      // Parse offset from cursor (for search pagination)
-      const offset = args.paginationOpts.cursor
-        ? parseInt(args.paginationOpts.cursor, 10)
-        : 0;
-
-      // Search using a single title search index to reduce storage overhead.
-      // We search the main 'tittel' field via the index, then filter 'korttittel'
-      // in memory. This avoids maintaining duplicate search indexes while still
-      // supporting searches in both fields.
-      const searchResults = await ctx.db
-        .query("cases")
-        .withSearchIndex("search_title", (q) => {
-          let searchQuery = q.search("tittel", args.search!);
-
-          // Apply single filter values using .eq() if only one selected
-          if (args.types && args.types.length === 1) {
-            searchQuery = searchQuery.eq("type", args.types[0]);
-          }
-          if (args.statuses && args.statuses.length === 1) {
-            searchQuery = searchQuery.eq("status", args.statuses[0]);
-          }
-
-          return searchQuery;
-        })
-        .take(100);
-
-      // Also check korttittel in memory for cases that might only match short title
-      const searchLower = args.search.toLowerCase();
-      let uniqueResults = searchResults.filter(
-        (doc) =>
-          doc.tittel.toLowerCase().includes(searchLower) ||
-          doc.korttittel.toLowerCase().includes(searchLower),
-      );
-
-      // Apply multi-select type and status filters in memory if needed
-      let filteredResults = uniqueResults;
-
-      if (args.types && args.types.length > 1) {
-        const validTypes = new Set(args.types);
-        filteredResults = filteredResults.filter((doc) => {
-          const docType = doc.type as
-            | "budsjett"
-            | "lovsak"
-            | "alminneligsak";
-          return validTypes.has(docType);
-        });
-      }
-
-      if (args.statuses && args.statuses.length > 1) {
-        const validStatuses = new Set(args.statuses);
-        filteredResults = filteredResults.filter((doc) => {
-          const docStatus = doc.status as
-            | "varslet"
-            | "mottatt"
-            | "til_behandling"
-            | "behandlet"
-            | "trukket"
-            | "bortfalt";
-          return validStatuses.has(docStatus);
-        });
-      }
-
-      // Sort by last updated date descending for consistent pagination
-      filteredResults.sort((a, b) =>
-        b.sist_oppdatert_dato.localeCompare(a.sist_oppdatert_dato),
-      );
-
-      // Implement offset-based pagination for search results
-      const pageSize = args.paginationOpts.numItems;
-      const startIndex = offset;
-      const endIndex = startIndex + pageSize;
-      const paginatedResults = filteredResults.slice(startIndex, endIndex);
-      const isDone = endIndex >= filteredResults.length;
-      const nextCursor = isDone ? null : endIndex.toString();
-
-      const votesForCases = await Promise.all(
-        paginatedResults.map((doc) =>
-          ctx.db
-            .query("votes")
-            .withIndex("by_case_id", (q) => q.eq("sak_id", doc.id))
-            .collect(),
-        ),
-      );
-
-      const cases = paginatedResults.map((doc, index) => ({
-        id: doc.id,
-        type: doc.type,
-        tittel: doc.tittel,
-        korttittel: doc.korttittel,
-        status: doc.status,
-        dokumentgruppe: doc.dokumentgruppe,
-        sist_oppdatert_dato: doc.sist_oppdatert_dato,
-        sak_fremmet_id: doc.sak_fremmet_id,
-        henvisning: doc.henvisning,
-        votes: votesForCases[index]?.length ?? 0,
-      }));
-
-      return {
-        page: cases,
-        isDone,
-        continueCursor: nextCursor,
-      };
-    }
-
-    // When no search, use regular index-based pagination with filters
+    // Use index-based pagination with type and status filters
     let query = ctx.db
       .query("cases")
       .withIndex("by_last_updated_date")
