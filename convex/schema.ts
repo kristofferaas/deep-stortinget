@@ -35,4 +35,9 @@ export default defineSchema({
       v.id("parties"),
     ), // Convex _id reference to avoid lookups
   }).index("by_table_and_external_id", ["table", "externalId"]),
+  // Sync settings for managing nightly sync toggle
+  syncSettings: defineTable({
+    key: v.string(), // Setting key (e.g., "nightly_sync_enabled")
+    enabled: v.boolean(), // Whether the setting is enabled
+  }).index("by_key", ["key"]),
 });

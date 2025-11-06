@@ -1,14 +1,9 @@
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Run the Stortinget sync workflow every day at 03:00 UTC.
-crons.cron(
-  "stortinget daily sync",
-  "0 3 * * *",
-  internal.sync.workflow.startWorkflow,
-  {},
-);
+// Static crons have been moved to runtime crons.
+// The nightly sync can now be toggled on/off via the sync settings page.
+// See convex/sync/settings.ts for the runtime cron management.
 
 export default crons;

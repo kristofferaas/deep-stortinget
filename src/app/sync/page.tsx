@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
   Card,
@@ -11,6 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import AsciiSpinner from "../ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
 
@@ -20,6 +22,8 @@ type SyncStatus = NonNullable<
 
 export default function SyncPage() {
   const syncStatus = useQuery(api.sync.workflow.getSyncStatus);
+  const nightlySyncEnabled = useQuery(api.sync.settings.getNightlySyncEnabled);
+  const toggleNightlySync = useMutation(api.sync.settings.toggleNightlySync);
   const [now, setNow] = useState(Date.now());
 
   // Update timer every second when sync is running
@@ -92,7 +96,7 @@ export default function SyncPage() {
     });
   };
 
-  if (syncStatus === undefined) {
+  if (syncStatus === undefined || nightlySyncEnabled === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <AsciiSpinner />
@@ -130,6 +134,31 @@ export default function SyncPage() {
         <h1 className="text-3xl font-bold mb-8">Synkroniseringsstatus</h1>
 
         <div className="flex flex-col gap-4">
+          {/* Nightly Sync Toggle */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Nattlig synkronisering</CardTitle>
+              <CardDescription>
+                Aktiver eller deaktiver automatisk synkronisering hver natt kl. 03:00 UTC.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="nightly-sync"
+                  checked={nightlySyncEnabled}
+                  onCheckedChange={(checked) => {
+                    toggleNightlySync({ enabled: checked });
+                  }}
+                />
+                <Label htmlFor="nightly-sync">
+                  {nightlySyncEnabled ? "Aktivert" : "Deaktivert"}
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sync Status */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -171,7 +200,9 @@ export default function SyncPage() {
                 syncStatus.status === "idle" &&
                 !syncStatus.message && (
                   <p className="text-sm text-muted-foreground">
-                    Synkronisering kjører daglig kl. 03:00 UTC.
+                    {nightlySyncEnabled
+                      ? "Synkronisering kjører daglig kl. 03:00 UTC."
+                      : "Nattlig synkronisering er deaktivert."}
                   </p>
                 )}
             </CardContent>
