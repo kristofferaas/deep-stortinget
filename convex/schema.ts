@@ -35,4 +35,14 @@ export default defineSchema({
       v.id("parties"),
     ), // Convex _id reference to avoid lookups
   }).index("by_table_and_external_id", ["table", "externalId"]),
+  // Chat threads - stores conversation threads
+  chatThreads: defineTable({
+    title: v.optional(v.string()), // Optional title for the conversation
+  }),
+  // Chat messages - stores messages in conversations
+  chatMessages: defineTable({
+    threadId: v.id("chatThreads"), // Reference to the thread
+    role: v.union(v.literal("user"), v.literal("assistant")), // Message sender
+    content: v.string(), // Message text content
+  }).index("by_thread_id", ["threadId"]),
 });
