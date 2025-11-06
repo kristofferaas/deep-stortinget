@@ -8,7 +8,7 @@ if [ "$CLAUDE_CODE_REMOTE" = "true" ]; then
   pnpm install
 
   # Start Convex in anonymous mode
-  CONVEX_AGENT_MODE=anonymous npx convex dev --once
+  CONVEX_AGENT_MODE=anonymous pnpm convex dev --once
 
   echo "Remote environment setup complete"
 fi
