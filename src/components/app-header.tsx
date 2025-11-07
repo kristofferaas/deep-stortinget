@@ -1,30 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 
 export function AppHeader() {
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      if (!ticking.current) {
+        requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
 
-      // Only hide/show header if scrolled more than 10px
-      if (Math.abs(currentScrollY - lastScrollY) < 10) {
-        return;
+          // Only hide/show header if scrolled more than 10px
+          if (Math.abs(currentScrollY - lastScrollY.current) < 10) {
+            ticking.current = false;
+            return;
+          }
+
+          if (currentScrollY < lastScrollY.current || currentScrollY < 100) {
+            // Scrolling up or near the top - show header
+            setIsVisible(true);
+          } else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+            // Scrolling down and past 100px - hide header
+            setIsVisible(false);
+          }
+
+          lastScrollY.current = currentScrollY;
+          ticking.current = false;
+        });
+
+        ticking.current = true;
       }
-
-      if (currentScrollY < lastScrollY || currentScrollY < 100) {
-        // Scrolling up or near the top - show header
-        setIsVisible(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down and past 100px - hide header
-        setIsVisible(false);
-      }
-
-      setLastScrollY(currentScrollY);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -32,7 +41,7 @@ export function AppHeader() {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [lastScrollY]);
+  }, []);
 
   return (
     <header
