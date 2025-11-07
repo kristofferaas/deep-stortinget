@@ -7,9 +7,6 @@ if [ "$CLAUDE_CODE_REMOTE" = "true" ]; then
   # Install dependencies
   pnpm install
 
-  # Initialize local backend first to generate config
-  CONVEX_AGENT_MODE=anonymous pnpm convex dev --local --once
-
   # Find the most recent backend config
   BACKEND_DIR=$(ls -td ~/.convex/anonymous-convex-backend-state/anonymous-agent-* 2>/dev/null | head -1)
 
