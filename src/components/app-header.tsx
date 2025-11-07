@@ -72,6 +72,20 @@ export function AppHeader() {
                 Deep stortinget
               </h1>
             </Link>
+            <nav className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+              >
+                Saker
+              </Link>
+              <Link
+                href="/hearings"
+                className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+              >
+                Høringer
+              </Link>
+            </nav>
           </div>
         </div>
       </div>
