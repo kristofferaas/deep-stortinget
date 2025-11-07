@@ -1,0 +1,14 @@
+diff --git a/dist/cli.bundle.cjs b/dist/cli.bundle.cjs
+index 79420b40b92051641045963889aed52057afc8df..c38999839adafb0faff8efb57b2763f7078f8016 100644
+--- a/dist/cli.bundle.cjs
++++ b/dist/cli.bundle.cjs
+@@ -184926,7 +184926,8 @@ async function main2() {
+   const minorVersion = parseInt(nodeVersion.split(".")[1], 10);
+   const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+   if (proxy) {
+-    (0, import_undici.setGlobalDispatcher)(new import_undici.ProxyAgent(proxy));
++    // PATCHED: Use EnvHttpProxyAgent which automatically handles NO_PROXY
++    (0, import_undici.setGlobalDispatcher)(new import_undici.EnvHttpProxyAgent());
+     logVerbose(`[proxy-bootstrap] Using proxy: ${proxy}`);
+   }
+   import_node_dns.default.setDefaultResultOrder("ipv4first");
