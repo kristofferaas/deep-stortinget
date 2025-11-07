@@ -298,9 +298,9 @@ export default function HearingsPage() {
                                 Startdato:{" "}
                               </span>
                               <span>
-                                {new Date(hearing.start_dato).toLocaleDateString(
-                                  "nb-NO",
-                                )}
+                                {new Date(
+                                  hearing.start_dato,
+                                ).toLocaleDateString("nb-NO")}
                               </span>
                             </div>
                             <div>

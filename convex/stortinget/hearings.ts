@@ -31,10 +31,8 @@ export const paginatedHearings = query({
     continueCursor: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
-    let query = ctx.db.query("hearings");
-
     // Get all hearings first
-    const allHearings = await query.collect();
+    const allHearings = await ctx.db.query("hearings").collect();
 
     // Apply filters
     let filteredHearings = allHearings;
