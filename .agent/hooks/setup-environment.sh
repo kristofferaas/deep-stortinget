@@ -9,7 +9,7 @@ if [ "$CLAUDE_CODE_REMOTE" = "true" ]; then
 
   # Setup a local anonyomus convex deployment
   export CONVEX_AGENT_MODE=anonymous 
-  pnpm convex dev --configure new --project deep-stortinget --dev-deployment local --team kristoffer-aas
+  pnpm convex dev --once --configure new --project deep-stortinget --dev-deployment local --team kristoffer-aas
 
   echo "Remote environment setup complete"
 fi
