@@ -6,6 +6,7 @@ if [ "$CLAUDE_CODE_REMOTE" = "true" ]; then
 
   # Install dependencies
   pnpm install
+  apt-get install expect -y
 
   # Configure local convex through interactive shell
   echo "Configuring Convex..."
