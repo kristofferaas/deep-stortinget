@@ -1,0 +1,43 @@
+diff --git a/dist/cli.bundle.cjs b/dist/cli.bundle.cjs
+index 79420b40b92051641045963889aed52057afc8df..6197c53e024b163f45eece7876232a3c6cb39a11 100644
+--- a/dist/cli.bundle.cjs
++++ b/dist/cli.bundle.cjs
+@@ -184926,7 +184926,37 @@ async function main2() {
+   const minorVersion = parseInt(nodeVersion.split(".")[1], 10);
+   const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+   if (proxy) {
+-    (0, import_undici.setGlobalDispatcher)(new import_undici.ProxyAgent(proxy));
++    // PATCHED: Create ProxyAgent with proper NO_PROXY handling for localhost
++    const noProxy = (process.env.NO_PROXY || process.env.no_proxy || '').split(',').map(s => s.trim());
++    const shouldProxyLocalhost = !noProxy.some(ex => 
++      ex === 'localhost' || ex === '127.0.0.1' || ex === '::1' || ex === '0.0.0.0'
++    );
++    
++    if (shouldProxyLocalhost) {
++      (0, import_undici.setGlobalDispatcher)(new import_undici.ProxyAgent(proxy));
++    } else {
++      // Create a custom dispatcher that bypasses proxy for localhost
++      const originalDispatcher = (0, import_undici.getGlobalDispatcher)();
++      const proxyAgent = new import_undici.ProxyAgent(proxy);
++      
++      (0, import_undici.setGlobalDispatcher)({
++        dispatch(opts, handler) {
++          const url = opts.origin;
++          const isLocalhost = url && (
++            url.includes('://localhost') || 
++            url.includes('://127.0.0.1') ||
++            url.includes('://[::1]') ||
++            url.includes('://0.0.0.0')
++          );
++          
++          if (isLocalhost) {
++            return originalDispatcher.dispatch(opts, handler);
++          } else {
++            return proxyAgent.dispatch(opts, handler);
++          }
++        }
++      });
++    }
+     logVerbose(`[proxy-bootstrap] Using proxy: ${proxy}`);
+   }
+   import_node_dns.default.setDefaultResultOrder("ipv4first");
