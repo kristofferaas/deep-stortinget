@@ -9,7 +9,7 @@
  */
 
 import type * as crons from "../crons.js";
-import type * as stortinget_cases from "../stortinget/cases.js";
+import type * as stortinget_feed from "../stortinget/feed.js";
 import type * as sync_cases from "../sync/cases.js";
 import type * as sync_helpers from "../sync/helpers.js";
 import type * as sync_parties from "../sync/parties.js";
@@ -34,7 +34,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   crons: typeof crons;
-  "stortinget/cases": typeof stortinget_cases;
+  "stortinget/feed": typeof stortinget_feed;
   "sync/cases": typeof sync_cases;
   "sync/helpers": typeof sync_helpers;
   "sync/parties": typeof sync_parties;

@@ -18,7 +18,7 @@ import AsciiSpinner from "./ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
 
 type PaginatedCases = InferQueryResult<
-  typeof api.stortinget.cases.paginatedCases
+  typeof api.stortinget.feed.paginatedCases
 >;
 type FeedCase = PaginatedCases["page"][number];
 
@@ -29,7 +29,7 @@ export default function Home() {
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const hasInitialized = useRef(false);
 
-  const result = useQuery(api.stortinget.cases.paginatedCases, {
+  const result = useQuery(api.stortinget.feed.paginatedCases, {
     paginationOpts: { numItems: 25, cursor },
   });
 
