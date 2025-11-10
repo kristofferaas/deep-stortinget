@@ -11,7 +11,7 @@ import { ArrowLeft } from "lucide-react";
 import { InferQueryResult } from "@/lib/utils";
 
 type CaseData = NonNullable<
-  InferQueryResult<typeof api.stortinget.cases.getCaseById>
+  InferQueryResult<typeof api.stortinget.feed.getCaseById>
 >;
 type CaseStatus = CaseData["case"]["status"];
 type CaseType = CaseData["case"]["type"];
@@ -27,7 +27,7 @@ export default function CaseDetailsPage() {
   const idNum = Number(idParam);
 
   const data = useQuery(
-    api.stortinget.cases.getCaseById,
+    api.stortinget.feed.getCaseById,
     idNum ? { id: idNum } : "skip",
   );
 
