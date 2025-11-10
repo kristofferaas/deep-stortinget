@@ -1,91 +1,14 @@
 diff --git a/dist/cli.bundle.cjs b/dist/cli.bundle.cjs
-index 79420b40b92051641045963889aed52057afc8df..d70778d35b9af0a6138ffb15ea64a6af1edf6f1e 100644
+index 79420b40b92051641045963889aed52057afc8df..c38999839adafb0faff8efb57b2763f7078f8016 100644
 --- a/dist/cli.bundle.cjs
 +++ b/dist/cli.bundle.cjs
-@@ -184926,8 +184926,84 @@ async function main2() {
+@@ -184926,7 +184926,8 @@ async function main2() {
    const minorVersion = parseInt(nodeVersion.split(".")[1], 10);
    const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
    if (proxy) {
 -    (0, import_undici.setGlobalDispatcher)(new import_undici.ProxyAgent(proxy));
--    logVerbose(`[proxy-bootstrap] Using proxy: ${proxy}`);
-+    // PATCHED: Create ProxyAgent with proper NO_PROXY handling
-+    // Parse NO_PROXY environment variable
-+    const noProxyEnv = process.env.NO_PROXY || process.env.no_proxy || '';
-+    const noProxyList = noProxyEnv.split(',').map(s => s.trim()).filter(Boolean);
-+    
-+    // Helper function to check if a URL should bypass the proxy
-+    function shouldBypassProxy(urlString) {
-+      if (!noProxyList.length) return false;
-+      
-+      try {
-+        const url = new URL(urlString);
-+        const hostname = url.hostname.toLowerCase();
-+        
-+        // Check against each NO_PROXY pattern
-+        return noProxyList.some(pattern => {
-+          const normalizedPattern = pattern.toLowerCase().trim();
-+          
-+          // Handle leading dot (e.g., .example.com matches sub.example.com)
-+          if (normalizedPattern.startsWith('.')) {
-+            return hostname.endsWith(normalizedPattern) || hostname === normalizedPattern.slice(1);
-+          }
-+          
-+          // Handle wildcard subdomain (e.g., *.example.com)
-+          if (normalizedPattern.startsWith('*.')) {
-+            const domain = normalizedPattern.slice(2);
-+            return hostname.endsWith('.' + domain) || hostname === domain;
-+          }
-+          
-+          // Handle IP ranges (simple CIDR check for 127.0.0.0/8)
-+          if (normalizedPattern.includes('/')) {
-+            const [network, bits] = normalizedPattern.split('/');
-+            if (network.startsWith('127.') && hostname.startsWith('127.')) {
-+              return true; // Simplified: match all 127.x.x.x
-+            }
-+          }
-+          
-+          // Exact match or suffix match
-+          return hostname === normalizedPattern || hostname.endsWith('.' + normalizedPattern);
-+        });
-+      } catch (e) {
-+        // If URL parsing fails, don't bypass proxy
-+        return false;
-+      }
-+    }
-+    
-+    // Check if localhost should be bypassed
-+    const localhostPatterns = ['localhost', '127.0.0.1', '::1', '0.0.0.0', '.localhost', '127.0.0.0/8'];
-+    const hasLocalhostBypass = noProxyList.some(pattern => {
-+      const p = pattern.toLowerCase().trim();
-+      return localhostPatterns.some(local => 
-+        p === local || p === '.' + local || p.startsWith('127.') || p === '*'
-+      );
-+    });
-+    
-+    if (!hasLocalhostBypass) {
-+      // No localhost bypass in NO_PROXY, use proxy normally
-+      (0, import_undici.setGlobalDispatcher)(new import_undici.ProxyAgent(proxy));
-+    } else {
-+      // Create a custom dispatcher that checks NO_PROXY per request
-+      const originalDispatcher = (0, import_undici.getGlobalDispatcher)();
-+      const proxyAgent = new import_undici.ProxyAgent(proxy);
-+      
-+      (0, import_undici.setGlobalDispatcher)({
-+        dispatch(opts, handler) {
-+          // Check if this request should bypass proxy using proper URL parsing
-+          const targetUrl = typeof opts.origin === 'string' 
-+            ? opts.origin 
-+            : opts.origin?.toString();
-+          
-+          if (targetUrl && shouldBypassProxy(targetUrl)) {
-+            return originalDispatcher.dispatch(opts, handler);
-+          } else {
-+            return proxyAgent.dispatch(opts, handler);
-+          }
-+        }
-+      });
-+    }
-+    logVerbose(`[proxy-bootstrap] Using proxy: ${proxy}`)
++    // PATCHED: Use EnvHttpProxyAgent which automatically handles NO_PROXY
++    (0, import_undici.setGlobalDispatcher)(new import_undici.EnvHttpProxyAgent());
+     logVerbose(`[proxy-bootstrap] Using proxy: ${proxy}`);
    }
    import_node_dns.default.setDefaultResultOrder("ipv4first");
-   if (majorVersion >= 20) {
