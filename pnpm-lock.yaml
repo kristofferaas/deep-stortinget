@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  convex@1.28.2:
+    hash: duyz3nzyb7gpcdntqvugm6kday
+    path: patches/convex@1.28.2.patch
+
 dependencies:
   '@convex-dev/workflow':
     specifier: 0.2.7
@@ -106,7 +111,7 @@ dependencies:
     version: 1.1.1(@types/react-dom@19.1.9)(@types/react@19.1.12)(react-dom@19.1.0)(react@19.1.0)
   convex:
     specifier: 1.28.2
-    version: 1.28.2(react@19.1.0)
+    version: 1.28.2(patch_hash=duyz3nzyb7gpcdntqvugm6kday)(react@19.1.0)
   date-fns:
     specifier: ^4.1.0
     version: 4.1.0
@@ -218,7 +223,7 @@ packages:
     dependencies:
       '@convex-dev/workpool': 0.2.19(convex-helpers@0.1.104)(convex@1.28.2)
       async-channel: 0.2.0
-      convex: 1.28.2(react@19.1.0)
+      convex: 1.28.2(patch_hash=duyz3nzyb7gpcdntqvugm6kday)(react@19.1.0)
       convex-helpers: 0.1.104(convex@1.28.2)(react@19.1.0)(typescript@5.9.2)(zod@4.1.12)
     dev: false
 
@@ -228,7 +233,7 @@ packages:
       convex: '>=1.25.0 <1.35.0'
       convex-helpers: ^0.1.94
     dependencies:
-      convex: 1.28.2(react@19.1.0)
+      convex: 1.28.2(patch_hash=duyz3nzyb7gpcdntqvugm6kday)(react@19.1.0)
       convex-helpers: 0.1.104(convex@1.28.2)(react@19.1.0)(typescript@5.9.2)(zod@4.1.12)
     dev: false
 
@@ -3202,13 +3207,13 @@ packages:
       zod:
         optional: true
     dependencies:
-      convex: 1.28.2(react@19.1.0)
+      convex: 1.28.2(patch_hash=duyz3nzyb7gpcdntqvugm6kday)(react@19.1.0)
       react: 19.1.0
       typescript: 5.9.2
       zod: 4.1.12
     dev: false
 
-  /convex@1.28.2(react@19.1.0):
+  /convex@1.28.2(patch_hash=duyz3nzyb7gpcdntqvugm6kday)(react@19.1.0):
     resolution: {integrity: sha512-KzNsLbcVXb1OhpVQ+vHMgu+hjrsQ1ks5BZwJ2lR8O+nfbeJXE6tHbvsg1H17+ooUDvIDBSMT3vXS+AlodDhTnQ==}
     engines: {node: '>=18.0.0', npm: '>=7.0.0'}
     hasBin: true
@@ -3228,6 +3233,7 @@ packages:
       prettier: 3.6.2
       react: 19.1.0
     dev: false
+    patched: true
 
   /cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
