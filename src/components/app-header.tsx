@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Menu } from "lucide-react";
 import { useScrollVisibility } from "@/hooks/use-scroll-visibility";
 
 export function AppHeader() {
@@ -13,15 +14,22 @@ export function AppHeader() {
       }`}
     >
       <div className="w-full max-w-2xl backdrop-blur-md bg-background/80 border border-border shadow-lg rounded-full px-6 py-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <Link
             href="/"
             className="flex items-center gap-2 group transition-colors"
           >
-            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary/70 transition-all duration-300">
+            <h1 className="text-lg italic font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary/70 transition-all duration-300">
               Deep stortinget
             </h1>
           </Link>
+          <button
+            type="button"
+            className="flex-shrink-0 w-9 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg"
+            aria-label="Menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>
