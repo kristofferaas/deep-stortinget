@@ -2,7 +2,7 @@ import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
 import { vResultValidator } from "@convex-dev/workpool";
 import { v } from "convex/values";
 import { components, internal } from "../_generated/api";
-import { internalAction, internalMutation, query } from "../_generated/server";
+import { internalAction, internalMutation, internalQuery, query, mutation } from "../_generated/server";
 import { SyncStatus } from "./validators";
 
 export const workflow = new WorkflowManager(components.workflow, {
@@ -54,6 +54,17 @@ export const syncStortingetWorkflow = workflow.define({
 
 export const startWorkflow = internalAction({
   handler: async (ctx) => {
+    // Check if nightly sync is enabled
+    const syncEnabled = await ctx.runQuery(
+      internal.sync.workflow.getSyncSetting,
+      { key: "nightly_sync_enabled" }
+    );
+
+    if (!syncEnabled) {
+      console.log("Nightly sync is disabled, skipping workflow");
+      return;
+    }
+
     await workflow.start(
       ctx,
       internal.sync.workflow.syncStortingetWorkflow,
@@ -205,5 +216,58 @@ export const getSyncStatus = query({
       .unique();
 
     return currentStatus;
+  },
+});
+
+// Internal query to get sync settings
+export const getSyncSetting = internalQuery({
+  args: { key: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const setting = await ctx.db
+      .query("syncSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+
+    // Default to false (disabled) if setting doesn't exist
+    return setting?.value ?? false;
+  },
+});
+
+// Public query to get nightly sync status
+export const isNightlySyncEnabled = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const setting = await ctx.db
+      .query("syncSettings")
+      .withIndex("by_key", (q) => q.eq("key", "nightly_sync_enabled"))
+      .unique();
+
+    // Default to false (disabled) if setting doesn't exist
+    return setting?.value ?? false;
+  },
+});
+
+// Public mutation to toggle nightly sync
+export const toggleNightlySync = mutation({
+  args: { enabled: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("syncSettings")
+      .withIndex("by_key", (q) => q.eq("key", "nightly_sync_enabled"))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { value: args.enabled });
+    } else {
+      await ctx.db.insert("syncSettings", {
+        key: "nightly_sync_enabled",
+        value: args.enabled,
+      });
+    }
+
+    return null;
   },
 });
