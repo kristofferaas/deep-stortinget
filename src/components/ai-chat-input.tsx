@@ -6,6 +6,7 @@ import { useScrollVisibility } from "@/hooks/use-scroll-visibility";
 
 export function AiChatInput() {
   const [message, setMessage] = useState("");
+  const [isMultiline, setIsMultiline] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isVisible = useScrollVisibility();
 
@@ -18,6 +19,9 @@ export function AiChatInput() {
       // Set height to scrollHeight, capped at a maximum
       const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
       textarea.style.height = `${newHeight}px`;
+
+      // Update multiline state based on height (single line is ~44px or less)
+      setIsMultiline(newHeight > 44);
     }
   }, [message]);
 
@@ -42,13 +46,15 @@ export function AiChatInput() {
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-40 flex justify-center p-4 transition-transform duration-300 ease-in-out ${
+      className={`fixed bottom-0 left-0 right-0 z-40 flex justify-center p-3 transition-transform duration-300 ease-in-out ${
         isVisible ? "translate-y-0" : "translate-y-full"
       }`}
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-3xl backdrop-blur-md bg-background/80 border border-border rounded-full shadow-lg flex items-end gap-3 p-3 pr-2"
+        className={`w-full max-w-2xl backdrop-blur-md bg-background/80 border border-border shadow-lg flex items-center gap-2 p-2 transition-all duration-200 ${
+          isMultiline ? "rounded-3xl" : "rounded-full"
+        }`}
       >
         <textarea
           ref={textareaRef}
@@ -57,7 +63,7 @@ export function AiChatInput() {
           onKeyDown={handleKeyDown}
           placeholder="Ask me anything..."
           rows={1}
-          className="flex-1 bg-transparent border-none outline-none resize-none px-4 py-2 text-foreground placeholder:text-muted-foreground focus:ring-0 min-h-[40px] max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
+          className="flex-1 bg-transparent border-none outline-none resize-none px-3 py-2 text-foreground placeholder:text-muted-foreground focus:ring-0 min-h-[36px] max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent leading-tight flex items-center"
           style={{
             scrollbarWidth: "thin",
           }}
@@ -65,10 +71,10 @@ export function AiChatInput() {
         <button
           type="submit"
           disabled={!message.trim()}
-          className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg disabled:shadow-none"
+          className="flex-shrink-0 w-9 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg disabled:shadow-none"
           aria-label="Send message"
         >
-          <Send className="w-5 h-5" />
+          <Send className="w-4 h-4" />
         </button>
       </form>
     </div>
