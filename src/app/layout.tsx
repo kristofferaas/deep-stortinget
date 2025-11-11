@@ -4,6 +4,7 @@ import "./globals.css";
 import ConvexClientProvider from "./convex-provider";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AppHeader } from "@/components/app-header";
+import { GloablChatProvider } from "@/components/global-chat/global-chat-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-dvh`}
       >
         <ConvexClientProvider>
           <ThemeProvider
@@ -37,8 +38,13 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AppHeader />
-            <main className="pt-16">{children}</main>
+            <GloablChatProvider>
+              <AppHeader />
+              <main>
+                <div className="h-14" />
+                {children}
+              </main>
+            </GloablChatProvider>
           </ThemeProvider>
         </ConvexClientProvider>
       </body>

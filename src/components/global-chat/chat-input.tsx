@@ -1,12 +1,10 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
 import { useScrollVisibility } from "@/hooks/use-scroll-visibility";
 
-export function AiChatInput() {
+export default function ChatInput() {
   const [message, setMessage] = useState("");
-  const [isMultiline, setIsMultiline] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isVisible = useScrollVisibility();
 
@@ -19,9 +17,6 @@ export function AiChatInput() {
       // Set height to scrollHeight, capped at a maximum
       const newHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
       textarea.style.height = `${newHeight}px`;
-
-      // Update multiline state based on height (single line is ~44px or less)
-      setIsMultiline(newHeight > 44);
     }
   }, [message]);
 
@@ -47,23 +42,26 @@ export function AiChatInput() {
   return (
     <div
       className={`fixed bottom-0 left-0 right-0 z-40 flex justify-center p-3 transition-transform duration-300 ease-in-out ${
-        isVisible ? "translate-y-0" : "translate-y-full"
+        isVisible || isFocused ? "translate-y-0" : "translate-y-full"
       }`}
+      style={{
+        bottom: "max(0px, env(safe-area-inset-bottom))",
+      }}
     >
       <form
         onSubmit={handleSubmit}
-        className={`w-full max-w-2xl backdrop-blur-md bg-background/80 border border-border shadow-lg flex items-center gap-2 p-2 transition-all duration-200 ${
-          isMultiline ? "rounded-3xl" : "rounded-full"
-        }`}
+        className="w-full max-w-2xl rounded-3xl backdrop-blur-md bg-background/80 border border-border shadow-lg flex items-end gap-2 p-2 transition-all duration-200"
       >
         <textarea
           ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder="Ask me anything..."
           rows={1}
-          className="flex-1 bg-transparent border-none outline-none resize-none px-3 py-2 text-foreground placeholder:text-muted-foreground focus:ring-0 min-h-[36px] max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent leading-tight flex items-center"
+          className="flex-1 border-none outline-none resize-none px-3 py-2 text-foreground placeholder:text-muted-foreground focus:ring-0 min-h-[36px] max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent leading-tight flex items-center"
           style={{
             scrollbarWidth: "thin",
           }}
