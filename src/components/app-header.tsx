@@ -18,13 +18,13 @@ export function AppHeader() {
           href="/"
           className="flex-1 bg-transparent px-3 py-2 group transition-colors"
         >
-          <h1 className="text-sm font-normal tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary/70 transition-all duration-300">
+          <h1 className="text-sm font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary/70 transition-all duration-300">
             Deep stortinget
           </h1>
         </Link>
         <button
           type="button"
-          className="flex-shrink-0 w-9 h-9 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg"
+          className="flex-shrink-0 w-9 h-9 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-all duration-200 flex items-center justify-center"
           aria-label="Menu"
         >
           <Menu className="w-4 h-4" />
