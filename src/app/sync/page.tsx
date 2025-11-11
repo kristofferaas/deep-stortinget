@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import AsciiSpinner from "../ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 type SyncStatus = NonNullable<
   InferQueryResult<typeof api.sync.workflow.getSyncStatus>
@@ -20,7 +21,10 @@ type SyncStatus = NonNullable<
 
 export default function SyncPage() {
   const syncStatus = useQuery(api.sync.workflow.getSyncStatus);
+  const isNightlySyncEnabled = useQuery(api.sync.workflow.isNightlySyncEnabled);
+  const toggleNightlySync = useMutation(api.sync.workflow.toggleNightlySync);
   const [now, setNow] = useState(Date.now());
+  const [isTogglingSync, setIsTogglingSync] = useState(false);
 
   // Update timer every second when sync is running
   useEffect(() => {
@@ -29,6 +33,16 @@ export default function SyncPage() {
       return () => clearInterval(interval);
     }
   }, [syncStatus?.status]);
+
+  // Handle nightly sync toggle
+  const handleToggleNightlySync = async (enabled: boolean) => {
+    setIsTogglingSync(true);
+    try {
+      await toggleNightlySync({ enabled });
+    } finally {
+      setIsTogglingSync(false);
+    }
+  };
 
   // Map status to badge variant
   const getStatusVariant = (status: SyncStatus["status"]) => {
@@ -92,7 +106,7 @@ export default function SyncPage() {
     });
   };
 
-  if (syncStatus === undefined) {
+  if (syncStatus === undefined || isNightlySyncEnabled === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <AsciiSpinner />
@@ -133,6 +147,27 @@ export default function SyncPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <CardTitle className="text-xl">Nattlig synkronisering</CardTitle>
+                  <CardDescription>
+                    {isNightlySyncEnabled
+                      ? "Automatisk synkronisering kjører daglig kl. 03:00 UTC"
+                      : "Automatisk synkronisering er deaktivert"}
+                  </CardDescription>
+                </div>
+                <Switch
+                  checked={isNightlySyncEnabled}
+                  onCheckedChange={handleToggleNightlySync}
+                  disabled={isTogglingSync}
+                  aria-label="Aktivér/deaktivér nattlig synkronisering"
+                />
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <CardTitle className="text-xl">Status</CardTitle>
                 <Badge variant={getStatusVariant(syncStatus.status)}>
                   {formatStatus(syncStatus.status)}
@@ -167,13 +202,6 @@ export default function SyncPage() {
                 </div>
               )}
 
-              {!syncStatus.startedAt &&
-                syncStatus.status === "idle" &&
-                !syncStatus.message && (
-                  <p className="text-sm text-muted-foreground">
-                    Synkronisering kjører daglig kl. 03:00 UTC.
-                  </p>
-                )}
             </CardContent>
           </Card>
         </div>

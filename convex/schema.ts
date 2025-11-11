@@ -23,6 +23,11 @@ export default defineSchema({
   parties: defineTable(partyValidator).index("by_party_id", ["id"]),
   // Sync metadata table
   sync: defineTable(syncStatusValidator).index("by_key", ["key"]),
+  // Sync settings (e.g., nightly_sync_enabled toggle)
+  syncSettings: defineTable({
+    key: v.string(),
+    value: v.boolean(),
+  }).index("by_key", ["key"]),
   // Sync cache for tracking external data and avoiding redundant updates
   syncCache: defineTable({
     checksum: v.string(), // SHA256 hash of the data
