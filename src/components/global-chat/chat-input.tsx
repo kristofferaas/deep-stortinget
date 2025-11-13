@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { Send } from "lucide-react";
 import { useScrollVisibility } from "@/hooks/use-scroll-visibility";
+import { ArrowUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export default function ChatInput() {
   const [message, setMessage] = useState("");
@@ -50,7 +50,7 @@ export default function ChatInput() {
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-2xl rounded-3xl backdrop-blur-md bg-background/80 border border-border shadow-lg flex items-end gap-2 p-2 transition-all duration-200"
+        className="w-full max-w-2xl rounded-[27px] backdrop-blur-md bg-background/70 border border-border shadow-lg flex items-end gap-2 p-2 transition-all duration-200"
       >
         <textarea
           ref={textareaRef}
@@ -72,7 +72,7 @@ export default function ChatInput() {
           className="flex-shrink-0 w-9 h-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg disabled:shadow-none"
           aria-label="Send message"
         >
-          <Send className="w-4 h-4" />
+          <ArrowUp className="w-4 h-4" />
         </button>
       </form>
     </div>
