@@ -2,7 +2,13 @@ import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
 import { vResultValidator } from "@convex-dev/workpool";
 import { v } from "convex/values";
 import { components, internal } from "../_generated/api";
-import { internalAction, internalMutation, internalQuery, query, mutation } from "../_generated/server";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+  query,
+  mutation,
+} from "../_generated/server";
 import { SyncStatus } from "./validators";
 import { Id } from "../_generated/dataModel";
 
@@ -26,7 +32,10 @@ export const syncStortingetWorkflow = workflow.define({
   },
   handler: async (step, args) => {
     // Sync parties from data.stortinget.no to database
-    const partyIds = await step.runAction(internal.sync.parties.syncParties, {});
+    const partyIds = await step.runAction(
+      internal.sync.parties.syncParties,
+      {},
+    );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId: args.runId,
       partiesCount: partyIds.length,
@@ -76,7 +85,7 @@ export const startWorkflow = internalAction({
     // Check if nightly sync is enabled
     const syncEnabled = await ctx.runQuery(
       internal.sync.workflow.getSyncSetting,
-      { key: "nightly_sync_enabled" }
+      { key: "nightly_sync_enabled" },
     );
 
     if (!syncEnabled) {
@@ -375,9 +384,8 @@ export const cleanupOldRuns = internalMutation({
       .withIndex("by_key", (q) => q.eq("key", "sync_runs_retention_days"))
       .unique();
 
-    const retentionDays = typeof retentionSetting?.value === "number"
-      ? retentionSetting.value
-      : 30;
+    const retentionDays =
+      typeof retentionSetting?.value === "number" ? retentionSetting.value : 30;
     const retentionMs = retentionDays * 24 * 60 * 60 * 1000;
     const cutoffTime = Date.now() - retentionMs;
 
