@@ -1,41 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useState } from "react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import AsciiSpinner from "../ascii-spinner";
-import { InferQueryResult } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { DataTable } from "./data-table";
 import { columns } from "./columns";
+import { InferQueryResult } from "@/lib/utils";
+import { Play, Square } from "lucide-react";
 
-type SyncRun = NonNullable<
-  InferQueryResult<typeof api.sync.workflow.getLatestSyncRun>
->;
+type SyncRun = InferQueryResult<typeof api.sync.workflow.getSyncRuns>[number];
 
 export default function SyncPage() {
-  const syncRun = useQuery(api.sync.workflow.getLatestSyncRun);
   const syncRuns = useQuery(api.sync.workflow.getSyncRuns);
   const isNightlySyncEnabled = useQuery(api.sync.workflow.isNightlySyncEnabled);
+  const isSyncRunning = useQuery(api.sync.workflow.isSyncRunning);
   const toggleNightlySync = useMutation(api.sync.workflow.toggleNightlySync);
-  const [now, setNow] = useState(Date.now());
+  const runManualSync = useAction(api.sync.workflow.runManualSync);
+  const cancelRunningSync = useAction(api.sync.workflow.cancelRunningSync);
+  const deleteSyncRunsMutation = useMutation(api.sync.workflow.deleteSyncRuns);
   const [isTogglingSync, setIsTogglingSync] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedRuns, setSelectedRuns] = useState<SyncRun[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Update timer every second when sync is running
-  useEffect(() => {
-    if (syncRun?.status === "started") {
-      const interval = setInterval(() => setNow(Date.now()), 1000);
-      return () => clearInterval(interval);
+  // Handle manual sync or cancel
+  const handleSyncAction = async () => {
+    setIsProcessing(true);
+    try {
+      if (isSyncRunning) {
+        await cancelRunningSync({});
+      } else {
+        await runManualSync({});
+      }
+    } finally {
+      setIsProcessing(false);
     }
-  }, [syncRun?.status]);
+  };
 
   // Handle nightly sync toggle
   const handleToggleNightlySync = async (enabled: boolean) => {
@@ -47,68 +50,29 @@ export default function SyncPage() {
     }
   };
 
-  // Map status to badge variant
-  const getStatusVariant = (status: SyncRun["status"]) => {
-    switch (status) {
-      case "success":
-        return "secondary";
-      case "started":
-        return "default";
-      case "error":
-      case "canceled":
-        return "destructive";
-    }
+  // Handle selection change
+  const handleSelectionChange = (selected: SyncRun[]) => {
+    setSelectedRuns(selected);
   };
 
-  // Format status text for display
-  const formatStatus = (status: SyncRun["status"]) => {
-    switch (status) {
-      case "started":
-        return "Synkroniserer";
-      case "success":
-        return "Vellykket";
-      case "error":
-        return "Feilet";
-      case "canceled":
-        return "Avbrutt";
+  // Handle delete selected runs
+  const handleDeleteRuns = async () => {
+    if (selectedRuns.length === 0) return;
+
+    setIsDeleting(true);
+    try {
+      const runIds = selectedRuns.map((run) => run._id);
+      await deleteSyncRunsMutation({ runIds });
+      setSelectedRuns([]); // Clear selection after delete
+    } finally {
+      setIsDeleting(false);
     }
-  };
-
-  // Calculate duration
-  const formatDuration = (
-    startedAt?: number,
-    finishedAt?: number,
-  ): string | null => {
-    if (!startedAt) return null;
-
-    const end = finishedAt || Date.now();
-    const durationMs = end - startedAt;
-    const seconds = Math.floor(durationMs / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}t ${minutes % 60}m ${seconds % 60}s`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    }
-    return `${seconds}s`;
-  };
-
-  // Format date/time
-  const formatDateTime = (timestamp?: number): string | null => {
-    if (!timestamp) return null;
-    return new Date(timestamp).toLocaleString("nb-NO", {
-      dateStyle: "short",
-      timeStyle: "medium",
-    });
   };
 
   if (
-    syncRun === undefined ||
     syncRuns === undefined ||
-    isNightlySyncEnabled === undefined
+    isNightlySyncEnabled === undefined ||
+    isSyncRunning === undefined
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -117,143 +81,65 @@ export default function SyncPage() {
     );
   }
 
-  if (!syncRun) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <h1 className="text-3xl font-bold mb-8">Synkroniseringsstatus</h1>
-          <Card>
-            <CardHeader>
-              <CardTitle>Ingen synkroniseringsstatus tilgjengelig</CardTitle>
-              <CardDescription>
-                Synkronisering har ikke blitt kjørt ennå.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  const duration = formatDuration(
-    syncRun.startedAt,
-    syncRun.status === "started" ? now : syncRun.finishedAt,
-  );
-  const startTime = formatDateTime(syncRun.startedAt);
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8">Synkroniseringsstatus</h1>
-
         <div className="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <CardTitle className="text-xl">
-                    Nattlig synkronisering
-                  </CardTitle>
-                  <CardDescription>
-                    {isNightlySyncEnabled
-                      ? "Automatisk synkronisering kjører daglig kl. 03:00 UTC"
-                      : "Automatisk synkronisering er deaktivert"}
-                  </CardDescription>
-                </div>
+          {/* Toolbar with actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <Button
+                onClick={handleSyncAction}
+                disabled={isProcessing}
+                size="sm"
+                variant={isSyncRunning ? "destructive" : "default"}
+              >
+                {isSyncRunning ? (
+                  <>
+                    <Square className="h-4 w-4" />
+                    {isProcessing ? "Stopper..." : "Stopp synk"}
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    {isProcessing ? "Starter..." : "Kjør synk"}
+                  </>
+                )}
+              </Button>
+              <div className="flex items-center gap-2">
                 <Switch
                   checked={isNightlySyncEnabled}
                   onCheckedChange={handleToggleNightlySync}
                   disabled={isTogglingSync}
-                  aria-label="Aktivér/deaktivér nattlig synkronisering"
+                  aria-label="Aktivér/deaktivér daglig synkronisering"
+                  id="daily-sync-toggle"
                 />
+                <label
+                  htmlFor="daily-sync-toggle"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Daglig synk
+                </label>
               </div>
-            </CardHeader>
-          </Card>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteRuns}
+              disabled={selectedRuns.length === 0 || isDeleting}
+            >
+              {isDeleting
+                ? "Sletter..."
+                : `Slett${selectedRuns.length > 0 ? ` (${selectedRuns.length})` : ""}`}
+            </Button>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">Status</CardTitle>
-                <Badge variant={getStatusVariant(syncRun.status)}>
-                  {formatStatus(syncRun.status)}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              {startTime && (
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">Startet</p>
-                  <p className="text-sm text-muted-foreground">{startTime}</p>
-                </div>
-              )}
-
-              {duration && (
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">
-                    {syncRun.status === "started"
-                      ? "Varighet"
-                      : "Total varighet"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{duration}</p>
-                </div>
-              )}
-
-              {syncRun.message && (
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">Melding</p>
-                  <p className="text-sm text-muted-foreground">
-                    {syncRun.message}
-                  </p>
-                </div>
-              )}
-
-              {/* Display sync counts if available */}
-              {(syncRun.partiesCount !== undefined ||
-                syncRun.casesCount !== undefined ||
-                syncRun.votesCount !== undefined ||
-                syncRun.voteProposalsCount !== undefined) && (
-                <div className="flex flex-col gap-2 mt-2">
-                  <p className="text-sm font-medium">Synkroniserte elementer</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {syncRun.partiesCount !== undefined && (
-                      <div className="text-sm text-muted-foreground">
-                        Partier: {syncRun.partiesCount}
-                      </div>
-                    )}
-                    {syncRun.casesCount !== undefined && (
-                      <div className="text-sm text-muted-foreground">
-                        Saker: {syncRun.casesCount}
-                      </div>
-                    )}
-                    {syncRun.votesCount !== undefined && (
-                      <div className="text-sm text-muted-foreground">
-                        Voteringer: {syncRun.votesCount}
-                      </div>
-                    )}
-                    {syncRun.voteProposalsCount !== undefined && (
-                      <div className="text-sm text-muted-foreground">
-                        Forslag: {syncRun.voteProposalsCount}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">
-                Synkroniseringshistorikk
-              </CardTitle>
-              <CardDescription>
-                De siste 100 synkroniseringskjøringene
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DataTable columns={columns} data={syncRuns} />
-            </CardContent>
-          </Card>
+          {/* Data table */}
+          <DataTable
+            columns={columns}
+            data={syncRuns}
+            onSelectionChange={handleSelectionChange}
+          />
         </div>
       </div>
     </div>
