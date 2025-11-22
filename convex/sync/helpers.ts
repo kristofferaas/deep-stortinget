@@ -115,7 +115,7 @@ export const caseSchema = stortingetDtoSchema.extend({
     if (val === 4) return "varslet"; // TODO: I have not verified status 4
     if (val === 5) return "trukket"; // TODO: I have not verified status 5
     if (val === 6) return "bortfalt"; // TODO: I have not verified status 6
-    throw new Error("Invalid case status");
+    throw new Error("Invalid case status: " + val);
   }),
   dokumentgruppe: z.number().transform((val) => {
     if (val === 0) return "ikke_spesifisert";
