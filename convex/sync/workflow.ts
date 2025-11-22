@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { components, internal } from "../_generated/api";
 import { internalAction, internalMutation, internalQuery, query, mutation } from "../_generated/server";
 import { SyncStatus } from "./validators";
+import { Id } from "../_generated/dataModel";
 
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
@@ -20,16 +21,23 @@ export const workflow = new WorkflowManager(components.workflow, {
 
 // The actual workflow that will be run
 export const syncStortingetWorkflow = workflow.define({
-  handler: async (step) => {
-    await step.runMutation(internal.sync.workflow.updateStatus, {
-      status: "started",
-    });
-
+  args: {
+    runId: v.id("syncRuns"),
+  },
+  handler: async (step, args) => {
     // Sync parties from data.stortinget.no to database
-    await step.runAction(internal.sync.parties.syncParties, {});
+    const partyIds = await step.runAction(internal.sync.parties.syncParties, {});
+    await step.runMutation(internal.sync.workflow.updateSyncRun, {
+      runId: args.runId,
+      partiesCount: partyIds.length,
+    });
 
     // Sync cases from data.stortinget.no to database
     const caseIds = await step.runAction(internal.sync.cases.syncCases, {});
+    await step.runMutation(internal.sync.workflow.updateSyncRun, {
+      runId: args.runId,
+      casesCount: caseIds.length,
+    });
 
     // Sync votes for ALL cases in parallel
     const promises = caseIds.map((id) =>
@@ -39,6 +47,10 @@ export const syncStortingetWorkflow = workflow.define({
 
     // Flatten ALL vote IDs (both new and existing) from all results
     const allVoteIds = results.flatMap((result) => result.voteIds);
+    await step.runMutation(internal.sync.workflow.updateSyncRun, {
+      runId: args.runId,
+      votesCount: allVoteIds.length,
+    });
 
     // Sync vote proposals for ALL votes in parallel
     const voteProposalPromises = allVoteIds.map((voteId) =>
@@ -46,7 +58,14 @@ export const syncStortingetWorkflow = workflow.define({
         voteId,
       }),
     );
-    await Promise.all(voteProposalPromises);
+    const voteProposalResults = await Promise.all(voteProposalPromises);
+
+    // Count total vote proposals synced (flatten all proposal IDs)
+    const allVoteProposalIds = voteProposalResults.flatMap((ids) => ids);
+    await step.runMutation(internal.sync.workflow.updateSyncRun, {
+      runId: args.runId,
+      voteProposalsCount: allVoteProposalIds.length,
+    });
   },
 });
 
@@ -65,13 +84,19 @@ export const startWorkflow = internalAction({
       return;
     }
 
+    // Create a new sync run entry
+    const { runId } = await ctx.runMutation(
+      internal.sync.workflow.createSyncRun,
+      {},
+    );
+
     await workflow.start(
       ctx,
       internal.sync.workflow.syncStortingetWorkflow,
-      {},
+      { runId },
       {
         onComplete: internal.sync.workflow.handleWorkflowComplete,
-        context: {},
+        context: { runId },
       },
     );
   },
@@ -81,29 +106,29 @@ export const handleWorkflowComplete = internalMutation({
   args: {
     workflowId: vWorkflowId,
     result: vResultValidator,
-    context: v.any(),
+    context: v.object({ runId: v.id("syncRuns") }),
   },
   handler: async (ctx, args) => {
     if (args.result.kind === "success") {
-      // cleanup, finalize DB, notify users, etc.
-      await ctx.runMutation(internal.sync.workflow.updateStatus, {
+      // Finalize the sync run
+      await ctx.runMutation(internal.sync.workflow.finalizeSyncRun, {
+        runId: args.context.runId,
         status: "success",
       });
+
+      // Cleanup old runs based on retention setting
+      await ctx.runMutation(internal.sync.workflow.cleanupOldRuns, {});
+
+      // Cleanup workflow metadata
       await workflow.cleanup(ctx, args.workflowId);
     } else {
-      // record failure/cancellation
-      await ctx.runMutation(
-        internal.sync.workflow.updateStatus,
-        args.result.kind === "canceled"
-          ? {
-              status: "canceled",
-              message: "Canceled",
-            }
-          : {
-              status: "error",
-              message: args.result.error,
-            },
-      );
+      // Record failure/cancellation
+      await ctx.runMutation(internal.sync.workflow.finalizeSyncRun, {
+        runId: args.context.runId,
+        status: args.result.kind === "canceled" ? "canceled" : "error",
+        message:
+          args.result.kind === "canceled" ? "Canceled" : args.result.error,
+      });
       // Do not cleanup the workflow on error or canceled
     }
   },
@@ -219,7 +244,7 @@ export const getSyncStatus = query({
   },
 });
 
-// Internal query to get sync settings
+// Internal query to get sync settings (boolean values only)
 export const getSyncSetting = internalQuery({
   args: { key: v.string() },
   returns: v.boolean(),
@@ -229,8 +254,8 @@ export const getSyncSetting = internalQuery({
       .withIndex("by_key", (q) => q.eq("key", args.key))
       .unique();
 
-    // Default to false (disabled) if setting doesn't exist
-    return setting?.value ?? false;
+    // Default to false (disabled) if setting doesn't exist or is not boolean
+    return typeof setting?.value === "boolean" ? setting.value : false;
   },
 });
 
@@ -244,8 +269,8 @@ export const isNightlySyncEnabled = query({
       .withIndex("by_key", (q) => q.eq("key", "nightly_sync_enabled"))
       .unique();
 
-    // Default to false (disabled) if setting doesn't exist
-    return setting?.value ?? false;
+    // Default to false (disabled) if setting doesn't exist or is not boolean
+    return typeof setting?.value === "boolean" ? setting.value : false;
   },
 });
 
@@ -269,5 +294,175 @@ export const toggleNightlySync = mutation({
     }
 
     return null;
+  },
+});
+
+// Sync run management functions
+
+export const createSyncRun = internalMutation({
+  args: {},
+  returns: v.object({
+    runId: v.id("syncRuns"),
+    workflowId: v.string(),
+  }),
+  handler: async (ctx) => {
+    // Generate a unique workflow ID
+    const workflowId = `sync-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    const runId: Id<"syncRuns"> = await ctx.db.insert("syncRuns", {
+      workflowId,
+      startedAt: Date.now(),
+      status: "started",
+    });
+
+    return { runId, workflowId };
+  },
+});
+
+export const updateSyncRun = internalMutation({
+  args: {
+    runId: v.id("syncRuns"),
+    partiesCount: v.optional(v.number()),
+    casesCount: v.optional(v.number()),
+    votesCount: v.optional(v.number()),
+    voteProposalsCount: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { runId, ...updates } = args;
+    await ctx.db.patch(runId, updates);
+    return null;
+  },
+});
+
+export const finalizeSyncRun = internalMutation({
+  args: {
+    runId: v.id("syncRuns"),
+    status: v.union(
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("canceled"),
+    ),
+    message: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const updates: {
+      status: "success" | "error" | "canceled";
+      finishedAt: number;
+      message?: string;
+    } = {
+      status: args.status,
+      finishedAt: Date.now(),
+    };
+
+    if (args.message) {
+      updates.message = args.message;
+    }
+
+    await ctx.db.patch(args.runId, updates);
+    return null;
+  },
+});
+
+export const cleanupOldRuns = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    // Get retention period from settings (default to 30 days)
+    const retentionSetting = await ctx.db
+      .query("syncSettings")
+      .withIndex("by_key", (q) => q.eq("key", "sync_runs_retention_days"))
+      .unique();
+
+    const retentionDays = typeof retentionSetting?.value === "number"
+      ? retentionSetting.value
+      : 30;
+    const retentionMs = retentionDays * 24 * 60 * 60 * 1000;
+    const cutoffTime = Date.now() - retentionMs;
+
+    // Query old runs
+    const oldRuns = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_startedAt")
+      .filter((q) => q.lt(q.field("startedAt"), cutoffTime))
+      .collect();
+
+    // Delete old runs
+    for (const run of oldRuns) {
+      await ctx.db.delete(run._id);
+    }
+
+    console.log(`Cleaned up ${oldRuns.length} old sync runs`);
+    return null;
+  },
+});
+
+// Public query to get the latest sync run
+export const getLatestSyncRun = query({
+  args: {},
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("syncRuns"),
+      _creationTime: v.number(),
+      workflowId: v.string(),
+      startedAt: v.number(),
+      finishedAt: v.optional(v.number()),
+      message: v.optional(v.string()),
+      status: v.union(
+        v.literal("started"),
+        v.literal("success"),
+        v.literal("error"),
+        v.literal("canceled"),
+      ),
+      partiesCount: v.optional(v.number()),
+      casesCount: v.optional(v.number()),
+      votesCount: v.optional(v.number()),
+      voteProposalsCount: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx) => {
+    const latestRun = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .first();
+
+    return latestRun;
+  },
+});
+
+// Public query to get all sync runs with pagination
+export const getSyncRuns = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("syncRuns"),
+      _creationTime: v.number(),
+      workflowId: v.string(),
+      startedAt: v.number(),
+      finishedAt: v.optional(v.number()),
+      message: v.optional(v.string()),
+      status: v.union(
+        v.literal("started"),
+        v.literal("success"),
+        v.literal("error"),
+        v.literal("canceled"),
+      ),
+      partiesCount: v.optional(v.number()),
+      casesCount: v.optional(v.number()),
+      votesCount: v.optional(v.number()),
+      voteProposalsCount: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx) => {
+    const runs = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .take(100); // Get the latest 100 runs
+
+    return runs;
   },
 });

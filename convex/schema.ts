@@ -23,10 +23,29 @@ export default defineSchema({
   parties: defineTable(partyValidator).index("by_party_id", ["id"]),
   // Sync metadata table
   sync: defineTable(syncStatusValidator).index("by_key", ["key"]),
+  // Sync runs history
+  syncRuns: defineTable({
+    workflowId: v.string(),
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+    message: v.optional(v.string()),
+    status: v.union(
+      v.literal("started"),
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("canceled"),
+    ),
+    partiesCount: v.optional(v.number()),
+    casesCount: v.optional(v.number()),
+    votesCount: v.optional(v.number()),
+    voteProposalsCount: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_startedAt", ["startedAt"]),
   // Sync settings (e.g., nightly_sync_enabled toggle)
   syncSettings: defineTable({
     key: v.string(),
-    value: v.boolean(),
+    value: v.union(v.boolean(), v.number()),
   }).index("by_key", ["key"]),
   // Sync cache for tracking external data and avoiding redundant updates
   syncCache: defineTable({

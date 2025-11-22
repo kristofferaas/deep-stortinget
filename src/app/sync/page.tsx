@@ -14,13 +14,16 @@ import { Badge } from "@/components/ui/badge";
 import AsciiSpinner from "../ascii-spinner";
 import { InferQueryResult } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { DataTable } from "./data-table";
+import { columns } from "./columns";
 
-type SyncStatus = NonNullable<
-  InferQueryResult<typeof api.sync.workflow.getSyncStatus>
+type SyncRun = NonNullable<
+  InferQueryResult<typeof api.sync.workflow.getLatestSyncRun>
 >;
 
 export default function SyncPage() {
-  const syncStatus = useQuery(api.sync.workflow.getSyncStatus);
+  const syncRun = useQuery(api.sync.workflow.getLatestSyncRun);
+  const syncRuns = useQuery(api.sync.workflow.getSyncRuns);
   const isNightlySyncEnabled = useQuery(api.sync.workflow.isNightlySyncEnabled);
   const toggleNightlySync = useMutation(api.sync.workflow.toggleNightlySync);
   const [now, setNow] = useState(Date.now());
@@ -28,11 +31,11 @@ export default function SyncPage() {
 
   // Update timer every second when sync is running
   useEffect(() => {
-    if (syncStatus?.status === "started") {
+    if (syncRun?.status === "started") {
       const interval = setInterval(() => setNow(Date.now()), 1000);
       return () => clearInterval(interval);
     }
-  }, [syncStatus?.status]);
+  }, [syncRun?.status]);
 
   // Handle nightly sync toggle
   const handleToggleNightlySync = async (enabled: boolean) => {
@@ -45,7 +48,7 @@ export default function SyncPage() {
   };
 
   // Map status to badge variant
-  const getStatusVariant = (status: SyncStatus["status"]) => {
+  const getStatusVariant = (status: SyncRun["status"]) => {
     switch (status) {
       case "success":
         return "secondary";
@@ -54,16 +57,12 @@ export default function SyncPage() {
       case "error":
       case "canceled":
         return "destructive";
-      case "idle":
-        return "outline";
     }
   };
 
   // Format status text for display
-  const formatStatus = (status: SyncStatus["status"]) => {
+  const formatStatus = (status: SyncRun["status"]) => {
     switch (status) {
-      case "idle":
-        return "Idle";
       case "started":
         return "Synkroniserer";
       case "success":
@@ -106,7 +105,11 @@ export default function SyncPage() {
     });
   };
 
-  if (syncStatus === undefined || isNightlySyncEnabled === undefined) {
+  if (
+    syncRun === undefined ||
+    syncRuns === undefined ||
+    isNightlySyncEnabled === undefined
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <AsciiSpinner />
@@ -114,7 +117,7 @@ export default function SyncPage() {
     );
   }
 
-  if (!syncStatus) {
+  if (!syncRun) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -133,10 +136,10 @@ export default function SyncPage() {
   }
 
   const duration = formatDuration(
-    syncStatus.startedAt,
-    syncStatus.status === "started" ? now : syncStatus.finishedAt,
+    syncRun.startedAt,
+    syncRun.status === "started" ? now : syncRun.finishedAt,
   );
-  const startTime = formatDateTime(syncStatus.startedAt);
+  const startTime = formatDateTime(syncRun.startedAt);
 
   return (
     <div className="min-h-screen bg-background">
@@ -169,8 +172,8 @@ export default function SyncPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl">Status</CardTitle>
-                <Badge variant={getStatusVariant(syncStatus.status)}>
-                  {formatStatus(syncStatus.status)}
+                <Badge variant={getStatusVariant(syncRun.status)}>
+                  {formatStatus(syncRun.status)}
                 </Badge>
               </div>
             </CardHeader>
@@ -185,7 +188,7 @@ export default function SyncPage() {
               {duration && (
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium">
-                    {syncStatus.status === "started"
+                    {syncRun.status === "started"
                       ? "Varighet"
                       : "Total varighet"}
                   </p>
@@ -193,15 +196,59 @@ export default function SyncPage() {
                 </div>
               )}
 
-              {syncStatus.message && (
+              {syncRun.message && (
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium">Melding</p>
                   <p className="text-sm text-muted-foreground">
-                    {syncStatus.message}
+                    {syncRun.message}
                   </p>
                 </div>
               )}
 
+              {/* Display sync counts if available */}
+              {(syncRun.partiesCount !== undefined ||
+                syncRun.casesCount !== undefined ||
+                syncRun.votesCount !== undefined ||
+                syncRun.voteProposalsCount !== undefined) && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <p className="text-sm font-medium">Synkroniserte elementer</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {syncRun.partiesCount !== undefined && (
+                      <div className="text-sm text-muted-foreground">
+                        Partier: {syncRun.partiesCount}
+                      </div>
+                    )}
+                    {syncRun.casesCount !== undefined && (
+                      <div className="text-sm text-muted-foreground">
+                        Saker: {syncRun.casesCount}
+                      </div>
+                    )}
+                    {syncRun.votesCount !== undefined && (
+                      <div className="text-sm text-muted-foreground">
+                        Voteringer: {syncRun.votesCount}
+                      </div>
+                    )}
+                    {syncRun.voteProposalsCount !== undefined && (
+                      <div className="text-sm text-muted-foreground">
+                        Forslag: {syncRun.voteProposalsCount}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Synkroniseringshistorikk</CardTitle>
+              <CardDescription>
+                De siste 100 synkroniseringskjøringene
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable columns={columns} data={syncRuns} />
             </CardContent>
           </Card>
         </div>

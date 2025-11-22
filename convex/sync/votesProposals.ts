@@ -71,7 +71,7 @@ const normalizeVoteProposals = async (
 
 export const syncVoteProposals = internalAction({
   args: { voteId: v.number() },
-  returns: v.null(),
+  returns: v.array(v.number()),
   handler: async (ctx, args) => {
     const baseUrl =
       process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
@@ -99,7 +99,7 @@ export const syncVoteProposals = internalAction({
       );
     });
 
-    return null;
+    return voteProposalsWithChecksums.map((p) => p.id);
   },
 });
 
