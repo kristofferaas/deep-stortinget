@@ -1,4 +1,4 @@
-import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
+import { vWorkflowId, WorkflowManager, WorkflowId } from "@convex-dev/workflow";
 import { vResultValidator } from "@convex-dev/workpool";
 import { v } from "convex/values";
 import { components, internal } from "../_generated/api";
@@ -8,6 +8,7 @@ import {
   internalQuery,
   query,
   mutation,
+  action,
 } from "../_generated/server";
 import { SyncStatus } from "./validators";
 import { Id } from "../_generated/dataModel";
@@ -93,13 +94,14 @@ export const startWorkflow = internalAction({
       return;
     }
 
-    // Create a new sync run entry
-    const { runId } = await ctx.runMutation(
-      internal.sync.workflow.createSyncRun,
+    // Create a new sync run entry with placeholder workflowId
+    const runId = await ctx.runMutation(
+      internal.sync.workflow.registerSyncRun,
       {},
     );
 
-    await workflow.start(
+    // Start the workflow and capture the returned workflowId
+    const workflowId = await workflow.start(
       ctx,
       internal.sync.workflow.syncStortingetWorkflow,
       { runId },
@@ -108,6 +110,12 @@ export const startWorkflow = internalAction({
         context: { runId },
       },
     );
+
+    // Update the sync run with the actual workflowId
+    await ctx.runMutation(internal.sync.workflow.updateSyncRunWorkflowId, {
+      runId,
+      workflowId,
+    });
   },
 });
 
@@ -308,23 +316,34 @@ export const toggleNightlySync = mutation({
 
 // Sync run management functions
 
-export const createSyncRun = internalMutation({
-  args: {},
-  returns: v.object({
-    runId: v.id("syncRuns"),
-    workflowId: v.string(),
-  }),
-  handler: async (ctx) => {
-    // Generate a unique workflow ID
-    const workflowId = `sync-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
+export const registerSyncRun = internalMutation({
+  args: {
+    workflowId: v.optional(v.string()),
+  },
+  returns: v.id("syncRuns"),
+  handler: async (ctx, args) => {
     const runId: Id<"syncRuns"> = await ctx.db.insert("syncRuns", {
-      workflowId,
+      // Use provided workflowId or a temporary placeholder
+      workflowId: args.workflowId ?? "pending",
       startedAt: Date.now(),
       status: "started",
     });
 
-    return { runId, workflowId };
+    return runId;
+  },
+});
+
+export const updateSyncRunWorkflowId = internalMutation({
+  args: {
+    runId: v.id("syncRuns"),
+    workflowId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.runId, {
+      workflowId: args.workflowId,
+    });
+    return null;
   },
 });
 
@@ -472,5 +491,150 @@ export const getSyncRuns = query({
       .take(100); // Get the latest 100 runs
 
     return runs;
+  },
+});
+
+// Public mutation to delete sync runs and cleanup their workflows
+export const deleteSyncRuns = mutation({
+  args: {
+    runIds: v.array(v.id("syncRuns")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const runId of args.runIds) {
+      const run = await ctx.db.get(runId);
+      if (!run) continue;
+
+      // Cleanup the workflow using the workflowId
+      try {
+        await workflow.cleanup(ctx, run.workflowId as WorkflowId);
+      } catch (error) {
+        // Workflow might already be cleaned up or not exist, continue anyway
+        console.log(
+          `Failed to cleanup workflow ${run.workflowId}:`,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+
+      // Delete the sync run record
+      await ctx.db.delete(runId);
+    }
+
+    return null;
+  },
+});
+
+// Public action to manually trigger a sync
+export const runManualSync = action({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    // Create a new sync run entry with placeholder workflowId
+    const runId = await ctx.runMutation(
+      internal.sync.workflow.registerSyncRun,
+      {},
+    );
+
+    // Start the workflow and capture the returned workflowId
+    const workflowId = await workflow.start(
+      ctx,
+      internal.sync.workflow.syncStortingetWorkflow,
+      { runId },
+      {
+        onComplete: internal.sync.workflow.handleWorkflowComplete,
+        context: { runId },
+      },
+    );
+
+    // Update the sync run with the actual workflowId
+    await ctx.runMutation(internal.sync.workflow.updateSyncRunWorkflowId, {
+      runId,
+      workflowId,
+    });
+
+    return null;
+  },
+});
+
+// Public action to cancel the currently running sync
+export const cancelRunningSync = action({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    // Get the latest sync run with "started" status
+    const latestRun = await ctx.runQuery(
+      internal.sync.workflow.getLatestRunningSyncRun,
+    );
+
+    if (!latestRun) {
+      // No running sync to cancel
+      return null;
+    }
+
+    // Cancel the workflow
+    try {
+      await workflow.cancel(ctx, latestRun.workflowId as WorkflowId);
+    } catch (error) {
+      console.log(
+        `Failed to cancel workflow ${latestRun.workflowId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    return null;
+  },
+});
+
+// Public query to check if a sync is currently running
+export const isSyncRunning = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const latestRun = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .first();
+
+    return latestRun?.status === "started";
+  },
+});
+
+// Internal query to get the latest running sync run
+export const getLatestRunningSyncRun = internalQuery({
+  args: {},
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("syncRuns"),
+      _creationTime: v.number(),
+      workflowId: v.string(),
+      startedAt: v.number(),
+      finishedAt: v.optional(v.number()),
+      message: v.optional(v.string()),
+      status: v.union(
+        v.literal("started"),
+        v.literal("success"),
+        v.literal("error"),
+        v.literal("canceled"),
+      ),
+      partiesCount: v.optional(v.number()),
+      casesCount: v.optional(v.number()),
+      votesCount: v.optional(v.number()),
+      voteProposalsCount: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx) => {
+    const latestRun = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .first();
+
+    if (!latestRun || latestRun.status !== "started") {
+      return null;
+    }
+
+    return latestRun;
   },
 });
