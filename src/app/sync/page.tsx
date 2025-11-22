@@ -151,7 +151,9 @@ export default function SyncPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-1">
-                  <CardTitle className="text-xl">Nattlig synkronisering</CardTitle>
+                  <CardTitle className="text-xl">
+                    Nattlig synkronisering
+                  </CardTitle>
                   <CardDescription>
                     {isNightlySyncEnabled
                       ? "Automatisk synkronisering kjører daglig kl. 03:00 UTC"
@@ -236,13 +238,14 @@ export default function SyncPage() {
                   </div>
                 </div>
               )}
-
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Synkroniseringshistorikk</CardTitle>
+              <CardTitle className="text-xl">
+                Synkroniseringshistorikk
+              </CardTitle>
               <CardDescription>
                 De siste 100 synkroniseringskjøringene
               </CardDescription>
