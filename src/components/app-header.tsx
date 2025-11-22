@@ -4,25 +4,8 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useScrollVisibility } from "@/hooks/use-scroll-visibility";
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-
-const ThemeSwitcher = dynamic(
-  () =>
-    import("@/components/theme/theme-switcher").then((mod) => ({
-      default: mod.ThemeSwitcher,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <button
-        type="button"
-        className="flex-shrink-0 w-9 h-9 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-all duration-200 flex items-center justify-center"
-        aria-label="Toggle theme"
-        disabled
-      />
-    ),
-  },
-);
+import { ThemeSwitcher } from "@/components/theme/theme-switcher";
+import { ClientOnly } from "@/components/client-only";
 
 export function AppHeader() {
   const isVisible = useScrollVisibility();
@@ -119,7 +102,18 @@ export function AppHeader() {
                 </li>
               </ul>
               <div className="mt-2">
-                <ThemeSwitcher />
+                <ClientOnly
+                  fallback={
+                    <button
+                      type="button"
+                      className="flex-shrink-0 w-9 h-9 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-all duration-200 flex items-center justify-center"
+                      aria-label="Toggle theme"
+                      disabled
+                    />
+                  }
+                >
+                  <ThemeSwitcher />
+                </ClientOnly>
               </div>
             </nav>
           </div>
