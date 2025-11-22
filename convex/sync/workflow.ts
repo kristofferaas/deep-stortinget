@@ -1,16 +1,14 @@
-import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
+import { vWorkflowId, WorkflowId, WorkflowManager } from "@convex-dev/workflow";
 import { vResultValidator } from "@convex-dev/workpool";
 import { v } from "convex/values";
-import { components, internal } from "../_generated/api";
+import { api, components, internal } from "../_generated/api";
 import {
-  internalAction,
+  action,
   internalMutation,
   internalQuery,
-  query,
   mutation,
+  query,
 } from "../_generated/server";
-import { SyncStatus } from "./validators";
-import { Id } from "../_generated/dataModel";
 
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
@@ -27,24 +25,32 @@ export const workflow = new WorkflowManager(components.workflow, {
 
 // The actual workflow that will be run
 export const syncStortingetWorkflow = workflow.define({
-  args: {
-    runId: v.id("syncRuns"),
-  },
-  handler: async (step, args) => {
+  args: {},
+  handler: async (step) => {
+    const currentWorkflowId = step.workflowId;
+
+    // Create a new sync run entry with current workflowId
+    const runId = await step.runMutation(
+      internal.sync.workflow.registerSyncRun,
+      {
+        workflowId: currentWorkflowId,
+      },
+    );
+
     // Sync parties from data.stortinget.no to database
     const partyIds = await step.runAction(
       internal.sync.parties.syncParties,
       {},
     );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
-      runId: args.runId,
+      runId,
       partiesCount: partyIds.length,
     });
 
     // Sync cases from data.stortinget.no to database
     const caseIds = await step.runAction(internal.sync.cases.syncCases, {});
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
-      runId: args.runId,
+      runId,
       casesCount: caseIds.length,
     });
 
@@ -57,7 +63,7 @@ export const syncStortingetWorkflow = workflow.define({
     // Flatten ALL vote IDs (both new and existing) from all results
     const allVoteIds = results.flatMap((result) => result.voteIds);
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
-      runId: args.runId,
+      runId,
       votesCount: allVoteIds.length,
     });
 
@@ -72,7 +78,7 @@ export const syncStortingetWorkflow = workflow.define({
     // Count total vote proposals synced (flatten all proposal IDs)
     const allVoteProposalIds = voteProposalResults.flatMap((ids) => ids);
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
-      runId: args.runId,
+      runId,
       voteProposalsCount: allVoteProposalIds.length,
     });
   },
@@ -80,32 +86,32 @@ export const syncStortingetWorkflow = workflow.define({
 
 // Workflow helpers
 
-export const startWorkflow = internalAction({
-  handler: async (ctx) => {
-    // Check if nightly sync is enabled
-    const syncEnabled = await ctx.runQuery(
-      internal.sync.workflow.getSyncSetting,
-      { key: "nightly_sync_enabled" },
-    );
+export const startWorkflow = action({
+  args: {
+    force: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    if (!args.force) {
+      // Check if nightly sync is enabled
+      const syncEnabled = await ctx.runQuery(
+        internal.sync.workflow.getSyncSetting,
+        { key: "nightly_sync_enabled" },
+      );
 
-    if (!syncEnabled) {
-      console.log("Nightly sync is disabled, skipping workflow");
-      return;
+      if (!syncEnabled) {
+        console.log("Nightly sync is disabled, skipping workflow");
+        return;
+      }
     }
 
-    // Create a new sync run entry
-    const { runId } = await ctx.runMutation(
-      internal.sync.workflow.createSyncRun,
-      {},
-    );
-
+    // Start the workflow
     await workflow.start(
       ctx,
       internal.sync.workflow.syncStortingetWorkflow,
-      { runId },
+      {},
       {
         onComplete: internal.sync.workflow.handleWorkflowComplete,
-        context: { runId },
+        context: {},
       },
     );
   },
@@ -115,111 +121,39 @@ export const handleWorkflowComplete = internalMutation({
   args: {
     workflowId: vWorkflowId,
     result: vResultValidator,
-    context: v.object({ runId: v.id("syncRuns") }),
+    context: v.object({}),
   },
   handler: async (ctx, args) => {
-    if (args.result.kind === "success") {
-      // Finalize the sync run
-      await ctx.runMutation(internal.sync.workflow.finalizeSyncRun, {
-        runId: args.context.runId,
-        status: "success",
-      });
-
-      // Cleanup old runs based on retention setting
-      await ctx.runMutation(internal.sync.workflow.cleanupOldRuns, {});
-
-      // Cleanup workflow metadata
-      await workflow.cleanup(ctx, args.workflowId);
-    } else {
-      // Record failure/cancellation
-      await ctx.runMutation(internal.sync.workflow.finalizeSyncRun, {
-        runId: args.context.runId,
-        status: args.result.kind === "canceled" ? "canceled" : "error",
-        message:
-          args.result.kind === "canceled" ? "Canceled" : args.result.error,
-      });
-      // Do not cleanup the workflow on error or canceled
-    }
-  },
-});
-
-export const updateStatus = internalMutation({
-  args: {
-    status: v.union(
-      v.literal("success"),
-      v.literal("error"),
-      v.literal("canceled"),
-      v.literal("started"),
-      v.literal("idle"),
-    ),
-    message: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    const currentStatus = await ctx.db
-      .query("sync")
-      .withIndex("by_key", (q) => q.eq("key", "stortinget_sync"))
+    // Look up the sync run by workflowId
+    const syncRun = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
       .unique();
 
-    if (!currentStatus) {
-      // insert new status
-      const insertDoc: SyncStatus = {
-        key: "stortinget_sync",
-        status: args.status,
-      };
-      if (args.message !== undefined) insertDoc.message = args.message;
-      if (args.status === "started") insertDoc.startedAt = now;
-      if (
-        args.status === "success" ||
-        args.status === "error" ||
-        args.status === "canceled"
-      ) {
-        insertDoc.finishedAt = now;
-      }
-      await ctx.db.insert("sync", insertDoc);
-    } else {
-      // update status with appropriate timestamps
-      const patch: Partial<SyncStatus> = { status: args.status };
-
-      if (args.message !== undefined) patch.message = args.message;
-
-      switch (args.status) {
-        case "started":
-          // Treat started as a new start: always set startedAt and clear finishedAt
-          patch.startedAt = now;
-          patch.finishedAt = undefined;
-          break;
-        case "success":
-        case "error":
-        case "canceled":
-          patch.finishedAt = now;
-          break;
-        case "idle":
-          // leave timestamps as-is
-          break;
-      }
-      // Ensure we never end up with finishedAt before startedAt.
-      // If finishing and startedAt is missing or after finishedAt, set startedAt to now.
-      if (
-        (args.status === "success" ||
-          args.status === "error" ||
-          args.status === "canceled") &&
-        typeof patch.finishedAt === "number"
-      ) {
-        const started = currentStatus?.startedAt;
-        if (typeof started !== "number" || started > patch.finishedAt) {
-          patch.startedAt = now;
-        }
-      }
-
-      // When starting, explicitly clear any previous finishedAt
-      if (args.status === "started") {
-        // Explicitly clear any previous finishedAt
-        patch.finishedAt = undefined;
-      }
-
-      await ctx.db.patch(currentStatus._id, patch);
+    if (!syncRun) {
+      console.error(`No sync run found for workflow ${args.workflowId}`);
+      return;
     }
+
+    // Finalize the sync run based on the result
+    const status =
+      args.result.kind === "success"
+        ? "success"
+        : args.result.kind === "failed"
+          ? "failed"
+          : "canceled";
+
+    const message =
+      args.result.kind === "failed" ? args.result.error : undefined;
+
+    await ctx.runMutation(internal.sync.workflow.finalizeSyncRun, {
+      runId: syncRun._id,
+      status,
+      message,
+    });
+
+    // Clean up old runs regardless of outcome
+    await ctx.runMutation(internal.sync.workflow.cleanupOldRuns, {});
   },
 });
 
@@ -306,25 +240,64 @@ export const toggleNightlySync = mutation({
   },
 });
 
+// Public query to get sync runs retention days
+export const getSyncRunsRetentionDays = query({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    const setting = await ctx.db
+      .query("syncSettings")
+      .withIndex("by_key", (q) => q.eq("key", "sync_runs_retention_days"))
+      .unique();
+
+    // Default to 30 days if setting doesn't exist or is not a number
+    return typeof setting?.value === "number" ? setting.value : 30;
+  },
+});
+
+// Public mutation to update sync runs retention days
+export const updateSyncRunsRetentionDays = mutation({
+  args: { days: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Validate that days is a positive number
+    if (args.days < 1) {
+      throw new Error("Retention days must be at least 1");
+    }
+
+    const existing = await ctx.db
+      .query("syncSettings")
+      .withIndex("by_key", (q) => q.eq("key", "sync_runs_retention_days"))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { value: args.days });
+    } else {
+      await ctx.db.insert("syncSettings", {
+        key: "sync_runs_retention_days",
+        value: args.days,
+      });
+    }
+
+    return null;
+  },
+});
+
 // Sync run management functions
 
-export const createSyncRun = internalMutation({
-  args: {},
-  returns: v.object({
-    runId: v.id("syncRuns"),
-    workflowId: v.string(),
-  }),
-  handler: async (ctx) => {
-    // Generate a unique workflow ID
-    const workflowId = `sync-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-    const runId: Id<"syncRuns"> = await ctx.db.insert("syncRuns", {
-      workflowId,
+export const registerSyncRun = internalMutation({
+  args: {
+    workflowId: vWorkflowId,
+  },
+  returns: v.id("syncRuns"),
+  handler: async (ctx, args) => {
+    const runId = await ctx.db.insert("syncRuns", {
+      workflowId: args.workflowId,
       startedAt: Date.now(),
       status: "started",
     });
 
-    return { runId, workflowId };
+    return runId;
   },
 });
 
@@ -349,27 +322,18 @@ export const finalizeSyncRun = internalMutation({
     runId: v.id("syncRuns"),
     status: v.union(
       v.literal("success"),
-      v.literal("error"),
+      v.literal("failed"),
       v.literal("canceled"),
     ),
     message: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const updates: {
-      status: "success" | "error" | "canceled";
-      finishedAt: number;
-      message?: string;
-    } = {
+    await ctx.db.patch(args.runId, {
       status: args.status,
       finishedAt: Date.now(),
-    };
-
-    if (args.message) {
-      updates.message = args.message;
-    }
-
-    await ctx.db.patch(args.runId, updates);
+      message: args.message,
+    });
     return null;
   },
 });
@@ -397,9 +361,9 @@ export const cleanupOldRuns = internalMutation({
       .collect();
 
     // Delete old runs
-    for (const run of oldRuns) {
-      await ctx.db.delete(run._id);
-    }
+    await ctx.runMutation(api.sync.workflow.deleteSyncRuns, {
+      runIds: oldRuns.map((run) => run._id),
+    });
 
     console.log(`Cleaned up ${oldRuns.length} old sync runs`);
     return null;
@@ -421,7 +385,7 @@ export const getLatestSyncRun = query({
       status: v.union(
         v.literal("started"),
         v.literal("success"),
-        v.literal("error"),
+        v.literal("failed"),
         v.literal("canceled"),
       ),
       partiesCount: v.optional(v.number()),
@@ -455,7 +419,7 @@ export const getSyncRuns = query({
       status: v.union(
         v.literal("started"),
         v.literal("success"),
-        v.literal("error"),
+        v.literal("failed"),
         v.literal("canceled"),
       ),
       partiesCount: v.optional(v.number()),
@@ -472,5 +436,118 @@ export const getSyncRuns = query({
       .take(100); // Get the latest 100 runs
 
     return runs;
+  },
+});
+
+// Public mutation to delete sync runs and cleanup their workflows
+export const deleteSyncRuns = mutation({
+  args: {
+    runIds: v.array(v.id("syncRuns")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const runId of args.runIds) {
+      const run = await ctx.db.get(runId);
+      if (!run) continue;
+
+      // Cleanup the workflow using the workflowId
+      try {
+        await workflow.cleanup(ctx, run.workflowId);
+      } catch (error) {
+        // Workflow might already be cleaned up or not exist, continue anyway
+        console.log(
+          `Failed to cleanup workflow ${run.workflowId}:`,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+
+      // Delete the sync run record
+      await ctx.db.delete(runId);
+    }
+
+    return null;
+  },
+});
+
+// Public action to cancel the currently running sync
+export const cancelRunningSync = action({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    // Get the latest sync run with "started" status
+    const latestRun = await ctx.runQuery(
+      internal.sync.workflow.getLatestRunningSyncRun,
+    );
+
+    if (!latestRun) {
+      // No running sync to cancel
+      return null;
+    }
+
+    // Cancel the workflow
+    try {
+      await workflow.cancel(ctx, latestRun.workflowId as WorkflowId);
+    } catch (error) {
+      console.log(
+        `Failed to cancel workflow ${latestRun.workflowId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    return null;
+  },
+});
+
+// Public query to check if a sync is currently running
+export const isSyncRunning = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const latestRun = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .first();
+
+    return latestRun?.status === "started";
+  },
+});
+
+// Internal query to get the latest running sync run
+export const getLatestRunningSyncRun = internalQuery({
+  args: {},
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("syncRuns"),
+      _creationTime: v.number(),
+      workflowId: v.string(),
+      startedAt: v.number(),
+      finishedAt: v.optional(v.number()),
+      message: v.optional(v.string()),
+      status: v.union(
+        v.literal("started"),
+        v.literal("success"),
+        v.literal("failed"),
+        v.literal("canceled"),
+      ),
+      partiesCount: v.optional(v.number()),
+      casesCount: v.optional(v.number()),
+      votesCount: v.optional(v.number()),
+      voteProposalsCount: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx) => {
+    const latestRun = await ctx.db
+      .query("syncRuns")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .first();
+
+    if (!latestRun || latestRun.status !== "started") {
+      return null;
+    }
+
+    return latestRun;
   },
 });
