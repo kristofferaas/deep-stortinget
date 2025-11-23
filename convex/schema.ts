@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { vWorkflowId } from "@convex-dev/workflow";
 import {
   caseValidator,
   hearingValidator,
@@ -25,14 +26,14 @@ export default defineSchema({
   sync: defineTable(syncStatusValidator).index("by_key", ["key"]),
   // Sync runs history
   syncRuns: defineTable({
-    workflowId: v.string(),
+    workflowId: vWorkflowId,
     startedAt: v.number(),
     finishedAt: v.optional(v.number()),
     message: v.optional(v.string()),
     status: v.union(
       v.literal("started"),
       v.literal("success"),
-      v.literal("error"),
+      v.literal("failed"),
       v.literal("canceled"),
     ),
     partiesCount: v.optional(v.number()),
@@ -40,6 +41,7 @@ export default defineSchema({
     votesCount: v.optional(v.number()),
     voteProposalsCount: v.optional(v.number()),
   })
+    .index("by_workflowId", ["workflowId"])
     .index("by_status", ["status"])
     .index("by_startedAt", ["startedAt"]),
   // Sync settings (e.g., nightly_sync_enabled toggle)

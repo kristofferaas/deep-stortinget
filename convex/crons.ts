@@ -1,5 +1,5 @@
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
+import { api } from "./_generated/api";
 
 const crons = cronJobs();
 
@@ -7,7 +7,7 @@ const crons = cronJobs();
 crons.cron(
   "stortinget daily sync",
   "0 3 * * *",
-  internal.sync.workflow.startWorkflow,
+  api.sync.workflow.startWorkflow,
   {},
 );
 
