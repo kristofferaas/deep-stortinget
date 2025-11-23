@@ -5,7 +5,6 @@ import {
   caseValidator,
   hearingValidator,
   partyValidator,
-  syncStatusValidator,
   voteProposalValidator,
   voteValidator,
 } from "./sync/validators";
@@ -22,8 +21,6 @@ export default defineSchema({
     .index("by_vote_proposal_id", ["forslag_id"])
     .index("by_vote_id", ["votering_id"]),
   parties: defineTable(partyValidator).index("by_party_id", ["id"]),
-  // Sync metadata table
-  sync: defineTable(syncStatusValidator).index("by_key", ["key"]),
   // Sync runs history
   syncRuns: defineTable({
     workflowId: vWorkflowId,
