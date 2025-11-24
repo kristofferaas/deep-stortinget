@@ -48,10 +48,7 @@ export const syncCases = internalAction({
     );
 
     // Aggregate skipped counts from all batches
-    const totalSkipped = results.reduce(
-      (sum: number, r: number) => sum + r,
-      0,
-    );
+    const totalSkipped = results.reduce((sum: number, r: number) => sum + r, 0);
 
     return {
       caseIds: casesWithChecksums.map((c) => c.id),

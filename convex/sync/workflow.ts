@@ -49,10 +49,7 @@ export const syncStortingetWorkflow = workflow.define({
     });
 
     // Sync cases from data.stortinget.no to database
-    const casesResult = await step.runAction(
-      internal.sync.cases.syncCases,
-      {},
-    );
+    const casesResult = await step.runAction(internal.sync.cases.syncCases, {});
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
       casesCount: casesResult.caseIds.length,
@@ -70,10 +67,8 @@ export const syncStortingetWorkflow = workflow.define({
       (result: { voteIds: number[]; skipped: number }) => result.voteIds,
     );
     const totalVotesSkipped = votesResults.reduce(
-      (
-        sum: number,
-        result: { voteIds: number[]; skipped: number },
-      ): number => sum + result.skipped,
+      (sum: number, result: { voteIds: number[]; skipped: number }): number =>
+        sum + result.skipped,
       0,
     );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
