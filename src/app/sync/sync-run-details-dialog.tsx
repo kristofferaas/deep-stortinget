@@ -90,6 +90,15 @@ export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
               </div>
             </div>
           ))}
+
+          {syncRun.message && (
+            <div className="space-y-2">
+              <div className="font-medium text-sm">Melding:</div>
+              <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-xs font-mono border">
+                <code>{syncRun.message}</code>
+              </pre>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

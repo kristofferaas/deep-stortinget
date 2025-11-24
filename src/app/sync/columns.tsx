@@ -209,25 +209,10 @@ export const columns: ColumnDef<SyncRun>[] = [
   },
   {
     id: "details",
-    header: "Detaljer",
+    header: "",
     enableSorting: false,
     cell: ({ row }) => {
       return <SyncRunDetailsDialog syncRun={row.original} />;
-    },
-  },
-  {
-    accessorKey: "message",
-    header: "Melding",
-    enableSorting: false,
-    cell: ({ row }) => {
-      const message = row.getValue("message") as string | undefined;
-      return message ? (
-        <div className="text-sm text-muted-foreground max-w-xs truncate">
-          {message}
-        </div>
-      ) : (
-        <div className="text-sm text-muted-foreground">-</div>
-      );
     },
   },
 ];
