@@ -25,6 +25,8 @@ const partyResponseSchema = stortingetDtoSchema.extend({
 export const syncParties = internalAction({
   returns: v.object({
     partyIds: v.array(v.string()),
+    added: v.number(),
+    updated: v.number(),
     skipped: v.number(),
   }),
   handler: async (ctx) => {
@@ -51,21 +53,34 @@ export const syncParties = internalAction({
     );
 
     // Process parties in batches
-    const results: number[] = await batcher(
+    const results: Array<{
+      added: number;
+      updated: number;
+      skipped: number;
+    }> = await batcher(
       partiesWithChecksums,
-      async (batch): Promise<number> => {
+      async (
+        batch,
+      ): Promise<{ added: number; updated: number; skipped: number }> => {
         return await ctx.runMutation(internal.sync.parties.batchUpsertParties, {
           batch,
         });
       },
     );
 
-    // Aggregate skipped counts from all batches
-    const totalSkipped = results.reduce((sum: number, r: number) => sum + r, 0);
+    // Aggregate counts from all batches
+    const totals = results.reduce(
+      (acc, r) => ({
+        added: acc.added + r.added,
+        updated: acc.updated + r.updated,
+        skipped: acc.skipped + r.skipped,
+      }),
+      { added: 0, updated: 0, skipped: 0 },
+    );
 
     return {
       partyIds: partiesWithChecksums.map((p) => p.id),
-      skipped: totalSkipped,
+      ...totals,
     };
   },
 });
@@ -80,9 +95,16 @@ export const batchUpsertParties = internalMutation({
       }),
     ),
   }),
-  returns: v.number(),
+  returns: v.object({
+    added: v.number(),
+    updated: v.number(),
+    skipped: v.number(),
+  }),
   handler: async (ctx, args) => {
+    let addedCount = 0;
+    let updatedCount = 0;
     let skippedCount = 0;
+
     for (const dto of args.batch) {
       // First, check if a sync cache entry exists
       // This only queries the index, not the full document (cheap!)
@@ -108,12 +130,14 @@ export const batchUpsertParties = internalMutation({
           checksum: dto.checksum,
           internalId: partyId,
         });
+        addedCount++;
       } else {
         // Checksum changed - update party using stored internalId (no lookup needed!)
         await ctx.db.replace(cachedSync.internalId, dto.data);
         await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
+        updatedCount++;
       }
     }
-    return skippedCount;
+    return { added: addedCount, updated: updatedCount, skipped: skippedCount };
   },
 });

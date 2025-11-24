@@ -44,6 +44,8 @@ export const syncVotesForCase = internalAction({
   args: { caseId: v.number() },
   returns: v.object({
     voteIds: v.array(v.number()),
+    added: v.number(),
+    updated: v.number(),
     skipped: v.number(),
   }),
   handler: async (ctx, args) => {
@@ -76,14 +78,27 @@ export const syncVotesForCase = internalAction({
 
     // Process votes in batches
     const results = await batcher(votesWithChecksums, async (batch) => {
-      const result: { voteIds: number[]; skipped: number } =
-        await ctx.runMutation(internal.sync.votes.batchUpsertVotes, { batch });
+      const result: {
+        voteIds: number[];
+        added: number;
+        updated: number;
+        skipped: number;
+      } = await ctx.runMutation(internal.sync.votes.batchUpsertVotes, {
+        batch,
+      });
       return result;
     });
 
     const allVoteIds = results.flatMap((r) => r.voteIds);
-    const totalSkipped = results.reduce((sum, r) => sum + r.skipped, 0);
-    return { voteIds: allVoteIds, skipped: totalSkipped };
+    const totals = results.reduce(
+      (acc, r) => ({
+        added: acc.added + r.added,
+        updated: acc.updated + r.updated,
+        skipped: acc.skipped + r.skipped,
+      }),
+      { added: 0, updated: 0, skipped: 0 },
+    );
+    return { voteIds: allVoteIds, ...totals };
   },
 });
 
@@ -99,11 +114,16 @@ export const batchUpsertVotes = internalMutation({
   }),
   returns: v.object({
     voteIds: v.array(v.number()),
+    added: v.number(),
+    updated: v.number(),
     skipped: v.number(),
   }),
   handler: async (ctx, args) => {
     const voteIds: number[] = [];
+    let addedCount = 0;
+    let updatedCount = 0;
     let skippedCount = 0;
+
     for (const dto of args.batch) {
       // First, check if a sync cache entry exists
       // This only queries the index, not the full document (cheap!)
@@ -130,14 +150,21 @@ export const batchUpsertVotes = internalMutation({
           checksum: dto.checksum,
           internalId: voteId,
         });
+        addedCount++;
       } else {
         // Checksum changed - update vote using stored internalId (no lookup needed!)
         await ctx.db.replace(cachedSync.internalId, dto.data);
         await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
+        updatedCount++;
       }
 
       voteIds.push(dto.id);
     }
-    return { voteIds, skipped: skippedCount };
+    return {
+      voteIds,
+      added: addedCount,
+      updated: updatedCount,
+      skipped: skippedCount,
+    };
   },
 });
