@@ -37,6 +37,10 @@ export default defineSchema({
     casesCount: v.optional(v.number()),
     votesCount: v.optional(v.number()),
     voteProposalsCount: v.optional(v.number()),
+    partiesSkipped: v.optional(v.number()),
+    casesSkipped: v.optional(v.number()),
+    votesSkipped: v.optional(v.number()),
+    voteProposalsSkipped: v.optional(v.number()),
   })
     .index("by_workflowId", ["workflowId"])
     .index("by_status", ["status"])

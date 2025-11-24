@@ -150,7 +150,18 @@ export const columns: ColumnDef<SyncRun>[] = [
     },
     cell: ({ row }) => {
       const count = row.getValue("partiesCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
+      const skipped = row.original.partiesSkipped;
+      if (count === undefined) return <div className="text-sm">-</div>;
+      return (
+        <div className="text-sm">
+          {count}
+          {skipped !== undefined && skipped > 0 && (
+            <span className="text-muted-foreground text-xs ml-1">
+              ({skipped} hoppet over)
+            </span>
+          )}
+        </div>
+      );
     },
   },
   {
@@ -169,7 +180,18 @@ export const columns: ColumnDef<SyncRun>[] = [
     },
     cell: ({ row }) => {
       const count = row.getValue("casesCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
+      const skipped = row.original.casesSkipped;
+      if (count === undefined) return <div className="text-sm">-</div>;
+      return (
+        <div className="text-sm">
+          {count}
+          {skipped !== undefined && skipped > 0 && (
+            <span className="text-muted-foreground text-xs ml-1">
+              ({skipped} hoppet over)
+            </span>
+          )}
+        </div>
+      );
     },
   },
   {
@@ -188,7 +210,18 @@ export const columns: ColumnDef<SyncRun>[] = [
     },
     cell: ({ row }) => {
       const count = row.getValue("votesCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
+      const skipped = row.original.votesSkipped;
+      if (count === undefined) return <div className="text-sm">-</div>;
+      return (
+        <div className="text-sm">
+          {count}
+          {skipped !== undefined && skipped > 0 && (
+            <span className="text-muted-foreground text-xs ml-1">
+              ({skipped} hoppet over)
+            </span>
+          )}
+        </div>
+      );
     },
   },
   {
@@ -207,7 +240,18 @@ export const columns: ColumnDef<SyncRun>[] = [
     },
     cell: ({ row }) => {
       const count = row.getValue("voteProposalsCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
+      const skipped = row.original.voteProposalsSkipped;
+      if (count === undefined) return <div className="text-sm">-</div>;
+      return (
+        <div className="text-sm">
+          {count}
+          {skipped !== undefined && skipped > 0 && (
+            <span className="text-muted-foreground text-xs ml-1">
+              ({skipped} hoppet over)
+            </span>
+          )}
+        </div>
+      );
     },
   },
   {

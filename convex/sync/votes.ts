@@ -44,6 +44,7 @@ export const syncVotesForCase = internalAction({
   args: { caseId: v.number() },
   returns: v.object({
     voteIds: v.array(v.number()),
+    skipped: v.number(),
   }),
   handler: async (ctx, args) => {
     const baseUrl =
@@ -75,15 +76,14 @@ export const syncVotesForCase = internalAction({
 
     // Process votes in batches
     const results = await batcher(votesWithChecksums, async (batch) => {
-      const result: number[] = await ctx.runMutation(
-        internal.sync.votes.batchUpsertVotes,
-        { batch },
-      );
+      const result: { voteIds: number[]; skipped: number } =
+        await ctx.runMutation(internal.sync.votes.batchUpsertVotes, { batch });
       return result;
     });
 
-    const allVoteIds = results.flatMap((r) => r);
-    return { voteIds: allVoteIds };
+    const allVoteIds = results.flatMap((r) => r.voteIds);
+    const totalSkipped = results.reduce((sum, r) => sum + r.skipped, 0);
+    return { voteIds: allVoteIds, skipped: totalSkipped };
   },
 });
 
@@ -97,8 +97,13 @@ export const batchUpsertVotes = internalMutation({
       }),
     ),
   }),
+  returns: v.object({
+    voteIds: v.array(v.number()),
+    skipped: v.number(),
+  }),
   handler: async (ctx, args) => {
     const voteIds: number[] = [];
+    let skippedCount = 0;
     for (const dto of args.batch) {
       // First, check if a sync cache entry exists
       // This only queries the index, not the full document (cheap!)
@@ -112,6 +117,7 @@ export const batchUpsertVotes = internalMutation({
       if (cachedSync && cachedSync.checksum === dto.checksum) {
         // Checksum matches - skip (no database read or write needed!)
         voteIds.push(dto.id);
+        skippedCount++;
         continue;
       }
 
@@ -132,6 +138,6 @@ export const batchUpsertVotes = internalMutation({
 
       voteIds.push(dto.id);
     }
-    return voteIds;
+    return { voteIds, skipped: skippedCount };
   },
 });

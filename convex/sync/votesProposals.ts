@@ -71,7 +71,10 @@ const normalizeVoteProposals = async (
 
 export const syncVoteProposals = internalAction({
   args: { voteId: v.number() },
-  returns: v.array(v.number()),
+  returns: v.object({
+    voteProposalIds: v.array(v.number()),
+    skipped: v.number(),
+  }),
   handler: async (ctx, args) => {
     const baseUrl =
       process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
@@ -90,16 +93,28 @@ export const syncVoteProposals = internalAction({
     const voteProposalsWithChecksums = await normalizeVoteProposals(parsed);
 
     // Process vote proposals in batches
-    await batcher(voteProposalsWithChecksums, async (batch) => {
-      return await ctx.runMutation(
-        internal.sync.votesProposals.batchUpsertVoteProposals,
-        {
-          batch,
-        },
-      );
-    });
+    const results: number[] = await batcher(
+      voteProposalsWithChecksums,
+      async (batch): Promise<number> => {
+        return await ctx.runMutation(
+          internal.sync.votesProposals.batchUpsertVoteProposals,
+          {
+            batch,
+          },
+        );
+      },
+    );
 
-    return voteProposalsWithChecksums.map((p) => p.id);
+    // Aggregate skipped counts from all batches
+    const totalSkipped = results.reduce(
+      (sum: number, r: number) => sum + r,
+      0,
+    );
+
+    return {
+      voteProposalIds: voteProposalsWithChecksums.map((p) => p.id),
+      skipped: totalSkipped,
+    };
   },
 });
 
@@ -113,7 +128,9 @@ export const batchUpsertVoteProposals = internalMutation({
       }),
     ),
   }),
+  returns: v.number(),
   handler: async (ctx, args) => {
+    let skippedCount = 0;
     for (const dto of args.batch) {
       // First, check if a sync cache entry exists
       // This only queries the index, not the full document (cheap!)
@@ -126,6 +143,7 @@ export const batchUpsertVoteProposals = internalMutation({
 
       if (cachedSync && cachedSync.checksum === dto.checksum) {
         // Checksum matches - skip (no database read or write needed!)
+        skippedCount++;
         continue;
       }
 
@@ -144,6 +162,6 @@ export const batchUpsertVoteProposals = internalMutation({
         await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
       }
     }
-    return null;
+    return skippedCount;
   },
 });

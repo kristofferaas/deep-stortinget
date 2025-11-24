@@ -38,37 +38,52 @@ export const syncStortingetWorkflow = workflow.define({
     );
 
     // Sync parties from data.stortinget.no to database
-    const partyIds = await step.runAction(
+    const partiesResult = await step.runAction(
       internal.sync.parties.syncParties,
       {},
     );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
-      partiesCount: partyIds.length,
+      partiesCount: partiesResult.partyIds.length,
+      partiesSkipped: partiesResult.skipped,
     });
 
     // Sync cases from data.stortinget.no to database
-    const caseIds = await step.runAction(internal.sync.cases.syncCases, {});
+    const casesResult = await step.runAction(
+      internal.sync.cases.syncCases,
+      {},
+    );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
-      casesCount: caseIds.length,
+      casesCount: casesResult.caseIds.length,
+      casesSkipped: casesResult.skipped,
     });
 
     // Sync votes for ALL cases in parallel
-    const promises = caseIds.map((id) =>
+    const promises = casesResult.caseIds.map((id: number) =>
       step.runAction(internal.sync.votes.syncVotesForCase, { caseId: id }),
     );
-    const results = await Promise.all(promises);
+    const votesResults = await Promise.all(promises);
 
     // Flatten ALL vote IDs (both new and existing) from all results
-    const allVoteIds = results.flatMap((result) => result.voteIds);
+    const allVoteIds = votesResults.flatMap(
+      (result: { voteIds: number[]; skipped: number }) => result.voteIds,
+    );
+    const totalVotesSkipped = votesResults.reduce(
+      (
+        sum: number,
+        result: { voteIds: number[]; skipped: number },
+      ): number => sum + result.skipped,
+      0,
+    );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
       votesCount: allVoteIds.length,
+      votesSkipped: totalVotesSkipped,
     });
 
     // Sync vote proposals for ALL votes in parallel
-    const voteProposalPromises = allVoteIds.map((voteId) =>
+    const voteProposalPromises = allVoteIds.map((voteId: number) =>
       step.runAction(internal.sync.votesProposals.syncVoteProposals, {
         voteId,
       }),
@@ -76,10 +91,21 @@ export const syncStortingetWorkflow = workflow.define({
     const voteProposalResults = await Promise.all(voteProposalPromises);
 
     // Count total vote proposals synced (flatten all proposal IDs)
-    const allVoteProposalIds = voteProposalResults.flatMap((ids) => ids);
+    const allVoteProposalIds = voteProposalResults.flatMap(
+      (result: { voteProposalIds: number[]; skipped: number }) =>
+        result.voteProposalIds,
+    );
+    const totalVoteProposalsSkipped = voteProposalResults.reduce(
+      (
+        sum: number,
+        result: { voteProposalIds: number[]; skipped: number },
+      ): number => sum + result.skipped,
+      0,
+    );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
       voteProposalsCount: allVoteProposalIds.length,
+      voteProposalsSkipped: totalVoteProposalsSkipped,
     });
   },
 });
@@ -278,6 +304,10 @@ export const updateSyncRun = internalMutation({
     casesCount: v.optional(v.number()),
     votesCount: v.optional(v.number()),
     voteProposalsCount: v.optional(v.number()),
+    partiesSkipped: v.optional(v.number()),
+    casesSkipped: v.optional(v.number()),
+    votesSkipped: v.optional(v.number()),
+    voteProposalsSkipped: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -362,6 +392,10 @@ export const getLatestSyncRun = query({
       casesCount: v.optional(v.number()),
       votesCount: v.optional(v.number()),
       voteProposalsCount: v.optional(v.number()),
+      partiesSkipped: v.optional(v.number()),
+      casesSkipped: v.optional(v.number()),
+      votesSkipped: v.optional(v.number()),
+      voteProposalsSkipped: v.optional(v.number()),
     }),
   ),
   handler: async (ctx) => {
@@ -396,6 +430,10 @@ export const getSyncRuns = query({
       casesCount: v.optional(v.number()),
       votesCount: v.optional(v.number()),
       voteProposalsCount: v.optional(v.number()),
+      partiesSkipped: v.optional(v.number()),
+      casesSkipped: v.optional(v.number()),
+      votesSkipped: v.optional(v.number()),
+      voteProposalsSkipped: v.optional(v.number()),
     }),
   ),
   handler: async (ctx) => {
@@ -505,6 +543,10 @@ export const getLatestRunningSyncRun = internalQuery({
       casesCount: v.optional(v.number()),
       votesCount: v.optional(v.number()),
       voteProposalsCount: v.optional(v.number()),
+      partiesSkipped: v.optional(v.number()),
+      casesSkipped: v.optional(v.number()),
+      votesSkipped: v.optional(v.number()),
+      voteProposalsSkipped: v.optional(v.number()),
     }),
   ),
   handler: async (ctx) => {

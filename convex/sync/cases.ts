@@ -10,6 +10,10 @@ import { internal } from "../_generated/api";
 import { caseValidator } from "./validators";
 
 export const syncCases = internalAction({
+  returns: v.object({
+    caseIds: v.array(v.number()),
+    skipped: v.number(),
+  }),
   handler: async (ctx) => {
     const baseUrl =
       process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
@@ -34,13 +38,25 @@ export const syncCases = internalAction({
     );
 
     // Process cases in batches
-    await batcher(casesWithChecksums, async (batch) => {
-      return await ctx.runMutation(internal.sync.cases.batchUpsertCases, {
-        batch,
-      });
-    });
+    const results: number[] = await batcher(
+      casesWithChecksums,
+      async (batch): Promise<number> => {
+        return await ctx.runMutation(internal.sync.cases.batchUpsertCases, {
+          batch,
+        });
+      },
+    );
 
-    return casesWithChecksums.map((c) => c.id);
+    // Aggregate skipped counts from all batches
+    const totalSkipped = results.reduce(
+      (sum: number, r: number) => sum + r,
+      0,
+    );
+
+    return {
+      caseIds: casesWithChecksums.map((c) => c.id),
+      skipped: totalSkipped,
+    };
   },
 });
 
@@ -54,7 +70,9 @@ export const batchUpsertCases = internalMutation({
       }),
     ),
   }),
+  returns: v.number(),
   handler: async (ctx, args) => {
+    let skippedCount = 0;
     for (const dto of args.batch) {
       // First, check if a sync cache entry exists
       // This only queries the index, not the full document (cheap!)
@@ -67,6 +85,7 @@ export const batchUpsertCases = internalMutation({
 
       if (cachedSync && cachedSync.checksum === dto.checksum) {
         // Checksum matches - skip (no database read or write needed!)
+        skippedCount++;
         continue;
       }
 
@@ -85,6 +104,6 @@ export const batchUpsertCases = internalMutation({
         await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
       }
     }
-    return null;
+    return skippedCount;
   },
 });
