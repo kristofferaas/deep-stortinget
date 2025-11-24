@@ -23,6 +23,38 @@ export const workflow = new WorkflowManager(components.workflow, {
   },
 });
 
+// Reusable validator for sync run objects
+const syncRunValidator = v.object({
+  _id: v.id("syncRuns"),
+  _creationTime: v.number(),
+  workflowId: v.string(),
+  startedAt: v.number(),
+  finishedAt: v.optional(v.number()),
+  message: v.optional(v.string()),
+  status: v.union(
+    v.literal("started"),
+    v.literal("success"),
+    v.literal("failed"),
+    v.literal("canceled"),
+  ),
+  partiesCount: v.optional(v.number()),
+  casesCount: v.optional(v.number()),
+  votesCount: v.optional(v.number()),
+  voteProposalsCount: v.optional(v.number()),
+  partiesAdded: v.optional(v.number()),
+  casesAdded: v.optional(v.number()),
+  votesAdded: v.optional(v.number()),
+  voteProposalsAdded: v.optional(v.number()),
+  partiesUpdated: v.optional(v.number()),
+  casesUpdated: v.optional(v.number()),
+  votesUpdated: v.optional(v.number()),
+  voteProposalsUpdated: v.optional(v.number()),
+  partiesSkipped: v.optional(v.number()),
+  casesSkipped: v.optional(v.number()),
+  votesSkipped: v.optional(v.number()),
+  voteProposalsSkipped: v.optional(v.number()),
+});
+
 // The actual workflow that will be run
 export const syncStortingetWorkflow = workflow.define({
   args: {},
@@ -38,37 +70,65 @@ export const syncStortingetWorkflow = workflow.define({
     );
 
     // Sync parties from data.stortinget.no to database
-    const partyIds = await step.runAction(
+    const partiesResult = await step.runAction(
       internal.sync.parties.syncParties,
       {},
     );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
-      partiesCount: partyIds.length,
+      partiesCount: partiesResult.partyIds.length,
+      partiesAdded: partiesResult.added,
+      partiesUpdated: partiesResult.updated,
+      partiesSkipped: partiesResult.skipped,
     });
 
     // Sync cases from data.stortinget.no to database
-    const caseIds = await step.runAction(internal.sync.cases.syncCases, {});
+    const casesResult = await step.runAction(internal.sync.cases.syncCases, {});
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
-      casesCount: caseIds.length,
+      casesCount: casesResult.caseIds.length,
+      casesAdded: casesResult.added,
+      casesUpdated: casesResult.updated,
+      casesSkipped: casesResult.skipped,
     });
 
     // Sync votes for ALL cases in parallel
-    const promises = caseIds.map((id) =>
+    const promises = casesResult.caseIds.map((id: number) =>
       step.runAction(internal.sync.votes.syncVotesForCase, { caseId: id }),
     );
-    const results = await Promise.all(promises);
+    const votesResults = await Promise.all(promises);
 
     // Flatten ALL vote IDs (both new and existing) from all results
-    const allVoteIds = results.flatMap((result) => result.voteIds);
+    type VoteResult = {
+      voteIds: number[];
+      added: number;
+      updated: number;
+      skipped: number;
+    };
+    const allVoteIds = votesResults.flatMap(
+      (result: VoteResult) => result.voteIds,
+    );
+    const votesTotals = votesResults.reduce(
+      (
+        acc: { added: number; updated: number; skipped: number },
+        result: VoteResult,
+      ) => ({
+        added: acc.added + result.added,
+        updated: acc.updated + result.updated,
+        skipped: acc.skipped + result.skipped,
+      }),
+      { added: 0, updated: 0, skipped: 0 },
+    );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
       votesCount: allVoteIds.length,
+      votesAdded: votesTotals.added,
+      votesUpdated: votesTotals.updated,
+      votesSkipped: votesTotals.skipped,
     });
 
     // Sync vote proposals for ALL votes in parallel
-    const voteProposalPromises = allVoteIds.map((voteId) =>
+    const voteProposalPromises = allVoteIds.map((voteId: number) =>
       step.runAction(internal.sync.votesProposals.syncVoteProposals, {
         voteId,
       }),
@@ -76,10 +136,32 @@ export const syncStortingetWorkflow = workflow.define({
     const voteProposalResults = await Promise.all(voteProposalPromises);
 
     // Count total vote proposals synced (flatten all proposal IDs)
-    const allVoteProposalIds = voteProposalResults.flatMap((ids) => ids);
+    type VoteProposalResult = {
+      voteProposalIds: number[];
+      added: number;
+      updated: number;
+      skipped: number;
+    };
+    const allVoteProposalIds = voteProposalResults.flatMap(
+      (result: VoteProposalResult) => result.voteProposalIds,
+    );
+    const voteProposalsTotals = voteProposalResults.reduce(
+      (
+        acc: { added: number; updated: number; skipped: number },
+        result: VoteProposalResult,
+      ) => ({
+        added: acc.added + result.added,
+        updated: acc.updated + result.updated,
+        skipped: acc.skipped + result.skipped,
+      }),
+      { added: 0, updated: 0, skipped: 0 },
+    );
     await step.runMutation(internal.sync.workflow.updateSyncRun, {
       runId,
       voteProposalsCount: allVoteProposalIds.length,
+      voteProposalsAdded: voteProposalsTotals.added,
+      voteProposalsUpdated: voteProposalsTotals.updated,
+      voteProposalsSkipped: voteProposalsTotals.skipped,
     });
   },
 });
@@ -278,6 +360,18 @@ export const updateSyncRun = internalMutation({
     casesCount: v.optional(v.number()),
     votesCount: v.optional(v.number()),
     voteProposalsCount: v.optional(v.number()),
+    partiesAdded: v.optional(v.number()),
+    casesAdded: v.optional(v.number()),
+    votesAdded: v.optional(v.number()),
+    voteProposalsAdded: v.optional(v.number()),
+    partiesUpdated: v.optional(v.number()),
+    casesUpdated: v.optional(v.number()),
+    votesUpdated: v.optional(v.number()),
+    voteProposalsUpdated: v.optional(v.number()),
+    partiesSkipped: v.optional(v.number()),
+    casesSkipped: v.optional(v.number()),
+    votesSkipped: v.optional(v.number()),
+    voteProposalsSkipped: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -343,27 +437,7 @@ export const cleanupOldRuns = internalMutation({
 // Public query to get the latest sync run
 export const getLatestSyncRun = query({
   args: {},
-  returns: v.union(
-    v.null(),
-    v.object({
-      _id: v.id("syncRuns"),
-      _creationTime: v.number(),
-      workflowId: v.string(),
-      startedAt: v.number(),
-      finishedAt: v.optional(v.number()),
-      message: v.optional(v.string()),
-      status: v.union(
-        v.literal("started"),
-        v.literal("success"),
-        v.literal("failed"),
-        v.literal("canceled"),
-      ),
-      partiesCount: v.optional(v.number()),
-      casesCount: v.optional(v.number()),
-      votesCount: v.optional(v.number()),
-      voteProposalsCount: v.optional(v.number()),
-    }),
-  ),
+  returns: v.union(v.null(), syncRunValidator),
   handler: async (ctx) => {
     const latestRun = await ctx.db
       .query("syncRuns")
@@ -378,26 +452,7 @@ export const getLatestSyncRun = query({
 // Public query to get all sync runs with pagination
 export const getSyncRuns = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("syncRuns"),
-      _creationTime: v.number(),
-      workflowId: v.string(),
-      startedAt: v.number(),
-      finishedAt: v.optional(v.number()),
-      message: v.optional(v.string()),
-      status: v.union(
-        v.literal("started"),
-        v.literal("success"),
-        v.literal("failed"),
-        v.literal("canceled"),
-      ),
-      partiesCount: v.optional(v.number()),
-      casesCount: v.optional(v.number()),
-      votesCount: v.optional(v.number()),
-      voteProposalsCount: v.optional(v.number()),
-    }),
-  ),
+  returns: v.array(syncRunValidator),
   handler: async (ctx) => {
     const runs = await ctx.db
       .query("syncRuns")
@@ -486,27 +541,7 @@ export const isSyncRunning = query({
 // Internal query to get the latest running sync run
 export const getLatestRunningSyncRun = internalQuery({
   args: {},
-  returns: v.union(
-    v.null(),
-    v.object({
-      _id: v.id("syncRuns"),
-      _creationTime: v.number(),
-      workflowId: v.string(),
-      startedAt: v.number(),
-      finishedAt: v.optional(v.number()),
-      message: v.optional(v.string()),
-      status: v.union(
-        v.literal("started"),
-        v.literal("success"),
-        v.literal("failed"),
-        v.literal("canceled"),
-      ),
-      partiesCount: v.optional(v.number()),
-      casesCount: v.optional(v.number()),
-      votesCount: v.optional(v.number()),
-      voteProposalsCount: v.optional(v.number()),
-    }),
-  ),
+  returns: v.union(v.null(), syncRunValidator),
   handler: async (ctx) => {
     const latestRun = await ctx.db
       .query("syncRuns")

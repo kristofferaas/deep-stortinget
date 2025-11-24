@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { InferQueryResult } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import { DurationCell } from "./duration-cell";
+import { SyncRunDetailsDialog } from "./sync-run-details-dialog";
 
 type SyncRun = InferQueryResult<typeof api.sync.workflow.getSyncRuns>[number];
 
@@ -135,94 +136,83 @@ export const columns: ColumnDef<SyncRun>[] = [
     },
   },
   {
-    accessorKey: "partiesCount",
-    header: ({ column }) => {
-      return (
-        <button
-          className="flex items-center gap-1 hover:text-foreground"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Partier
-          {column.getIsSorted() === "asc" && <span>↑</span>}
-          {column.getIsSorted() === "desc" && <span>↓</span>}
-        </button>
-      );
+    id: "added",
+    header: "Lagt til",
+    accessorFn: (row) => {
+      const total =
+        (row.partiesAdded ?? 0) +
+        (row.casesAdded ?? 0) +
+        (row.votesAdded ?? 0) +
+        (row.voteProposalsAdded ?? 0);
+      return total;
     },
     cell: ({ row }) => {
-      const count = row.getValue("partiesCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
+      const total =
+        (row.original.partiesAdded ?? 0) +
+        (row.original.casesAdded ?? 0) +
+        (row.original.votesAdded ?? 0) +
+        (row.original.voteProposalsAdded ?? 0);
+      return (
+        <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+          {total}
+        </div>
+      );
     },
   },
   {
-    accessorKey: "casesCount",
-    header: ({ column }) => {
-      return (
-        <button
-          className="flex items-center gap-1 hover:text-foreground"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Saker
-          {column.getIsSorted() === "asc" && <span>↑</span>}
-          {column.getIsSorted() === "desc" && <span>↓</span>}
-        </button>
-      );
+    id: "updated",
+    header: "Oppdatert",
+    accessorFn: (row) => {
+      const total =
+        (row.partiesUpdated ?? 0) +
+        (row.casesUpdated ?? 0) +
+        (row.votesUpdated ?? 0) +
+        (row.voteProposalsUpdated ?? 0);
+      return total;
     },
     cell: ({ row }) => {
-      const count = row.getValue("casesCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
+      const total =
+        (row.original.partiesUpdated ?? 0) +
+        (row.original.casesUpdated ?? 0) +
+        (row.original.votesUpdated ?? 0) +
+        (row.original.voteProposalsUpdated ?? 0);
+      return (
+        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+          {total}
+        </div>
+      );
     },
   },
   {
-    accessorKey: "votesCount",
-    header: ({ column }) => {
-      return (
-        <button
-          className="flex items-center gap-1 hover:text-foreground"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Voteringer
-          {column.getIsSorted() === "asc" && <span>↑</span>}
-          {column.getIsSorted() === "desc" && <span>↓</span>}
-        </button>
-      );
+    id: "skipped",
+    header: "Hoppet over",
+    accessorFn: (row) => {
+      const total =
+        (row.partiesSkipped ?? 0) +
+        (row.casesSkipped ?? 0) +
+        (row.votesSkipped ?? 0) +
+        (row.voteProposalsSkipped ?? 0);
+      return total;
     },
     cell: ({ row }) => {
-      const count = row.getValue("votesCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
+      const total =
+        (row.original.partiesSkipped ?? 0) +
+        (row.original.casesSkipped ?? 0) +
+        (row.original.votesSkipped ?? 0) +
+        (row.original.voteProposalsSkipped ?? 0);
+      return (
+        <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+          {total}
+        </div>
+      );
     },
   },
   {
-    accessorKey: "voteProposalsCount",
-    header: ({ column }) => {
-      return (
-        <button
-          className="flex items-center gap-1 hover:text-foreground"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Forslag
-          {column.getIsSorted() === "asc" && <span>↑</span>}
-          {column.getIsSorted() === "desc" && <span>↓</span>}
-        </button>
-      );
-    },
-    cell: ({ row }) => {
-      const count = row.getValue("voteProposalsCount") as number | undefined;
-      return <div className="text-sm">{count ?? "-"}</div>;
-    },
-  },
-  {
-    accessorKey: "message",
-    header: "Melding",
+    id: "details",
+    header: "",
     enableSorting: false,
     cell: ({ row }) => {
-      const message = row.getValue("message") as string | undefined;
-      return message ? (
-        <div className="text-sm text-muted-foreground max-w-xs truncate">
-          {message}
-        </div>
-      ) : (
-        <div className="text-sm text-muted-foreground">-</div>
-      );
+      return <SyncRunDetailsDialog syncRun={row.original} />;
     },
   },
 ];

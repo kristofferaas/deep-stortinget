@@ -37,6 +37,18 @@ export default defineSchema({
     casesCount: v.optional(v.number()),
     votesCount: v.optional(v.number()),
     voteProposalsCount: v.optional(v.number()),
+    partiesAdded: v.optional(v.number()),
+    casesAdded: v.optional(v.number()),
+    votesAdded: v.optional(v.number()),
+    voteProposalsAdded: v.optional(v.number()),
+    partiesUpdated: v.optional(v.number()),
+    casesUpdated: v.optional(v.number()),
+    votesUpdated: v.optional(v.number()),
+    voteProposalsUpdated: v.optional(v.number()),
+    partiesSkipped: v.optional(v.number()),
+    casesSkipped: v.optional(v.number()),
+    votesSkipped: v.optional(v.number()),
+    voteProposalsSkipped: v.optional(v.number()),
   })
     .index("by_workflowId", ["workflowId"])
     .index("by_status", ["status"])

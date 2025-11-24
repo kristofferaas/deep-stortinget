@@ -23,7 +23,12 @@ const partyResponseSchema = stortingetDtoSchema.extend({
 });
 
 export const syncParties = internalAction({
-  returns: v.array(v.string()),
+  returns: v.object({
+    partyIds: v.array(v.string()),
+    added: v.number(),
+    updated: v.number(),
+    skipped: v.number(),
+  }),
   handler: async (ctx) => {
     const baseUrl =
       process.env.STORTINGET_BASE_URL ?? "https://data.stortinget.no";
@@ -48,13 +53,35 @@ export const syncParties = internalAction({
     );
 
     // Process parties in batches
-    await batcher(partiesWithChecksums, async (batch) => {
-      return await ctx.runMutation(internal.sync.parties.batchUpsertParties, {
+    const results: Array<{
+      added: number;
+      updated: number;
+      skipped: number;
+    }> = await batcher(
+      partiesWithChecksums,
+      async (
         batch,
-      });
-    });
+      ): Promise<{ added: number; updated: number; skipped: number }> => {
+        return await ctx.runMutation(internal.sync.parties.batchUpsertParties, {
+          batch,
+        });
+      },
+    );
 
-    return partiesWithChecksums.map((p) => p.id);
+    // Aggregate counts from all batches
+    const totals = results.reduce(
+      (acc, r) => ({
+        added: acc.added + r.added,
+        updated: acc.updated + r.updated,
+        skipped: acc.skipped + r.skipped,
+      }),
+      { added: 0, updated: 0, skipped: 0 },
+    );
+
+    return {
+      partyIds: partiesWithChecksums.map((p) => p.id),
+      ...totals,
+    };
   },
 });
 
@@ -68,7 +95,16 @@ export const batchUpsertParties = internalMutation({
       }),
     ),
   }),
+  returns: v.object({
+    added: v.number(),
+    updated: v.number(),
+    skipped: v.number(),
+  }),
   handler: async (ctx, args) => {
+    let addedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+
     for (const dto of args.batch) {
       // First, check if a sync cache entry exists
       // This only queries the index, not the full document (cheap!)
@@ -81,6 +117,7 @@ export const batchUpsertParties = internalMutation({
 
       if (cachedSync && cachedSync.checksum === dto.checksum) {
         // Checksum matches - skip (no database read or write needed!)
+        skippedCount++;
         continue;
       }
 
@@ -93,12 +130,14 @@ export const batchUpsertParties = internalMutation({
           checksum: dto.checksum,
           internalId: partyId,
         });
+        addedCount++;
       } else {
         // Checksum changed - update party using stored internalId (no lookup needed!)
         await ctx.db.replace(cachedSync.internalId, dto.data);
         await ctx.db.patch(cachedSync._id, { checksum: dto.checksum });
+        updatedCount++;
       }
     }
-    return null;
+    return { added: addedCount, updated: updatedCount, skipped: skippedCount };
   },
 });
