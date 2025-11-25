@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,10 +9,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
-import { InferQueryResult } from "@/lib/utils";
+import { InferQueryResult, cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SyncRun = InferQueryResult<typeof api.sync.workflow.getSyncRuns>[number];
 
@@ -20,6 +32,9 @@ interface SyncRunDetailsDialogProps {
 }
 
 export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
+  const [open, setOpen] = React.useState(false);
+  const isMobile = useIsMobile();
+
   const entities = [
     {
       name: "Partier",
@@ -51,8 +66,38 @@ export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
     },
   ];
 
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Info className="h-4 w-4" />
+          </Button>
+        </DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Synkroniseringsdetaljer</DrawerTitle>
+            <DrawerDescription>
+              Detaljert oversikt over synkroniseringen
+            </DrawerDescription>
+          </DrawerHeader>
+          <SyncRunDetailsContent
+            entities={entities}
+            message={syncRun.message}
+            className="px-4"
+          />
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button variant="outline">Lukk</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Info className="h-4 w-4" />
@@ -65,42 +110,64 @@ export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
             Detaljert oversikt over synkroniseringen
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
-          {entities.map((entity) => (
-            <div key={entity.name} className="border rounded-lg p-4">
-              <div className="font-medium mb-2">{entity.name}</div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-muted-foreground">Totalt:</div>
-                <div className="font-medium">{entity.total}</div>
-
-                <div className="text-muted-foreground">Lagt til:</div>
-                <div className="text-green-600 dark:text-green-400 font-medium">
-                  {entity.added}
-                </div>
-
-                <div className="text-muted-foreground">Oppdatert:</div>
-                <div className="text-blue-600 dark:text-blue-400 font-medium">
-                  {entity.updated}
-                </div>
-
-                <div className="text-muted-foreground">Hoppet over:</div>
-                <div className="text-gray-600 dark:text-gray-400 font-medium">
-                  {entity.skipped}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {syncRun.message && (
-            <div className="space-y-2">
-              <div className="font-medium text-sm">Melding:</div>
-              <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-xs font-mono border">
-                <code>{syncRun.message}</code>
-              </pre>
-            </div>
-          )}
-        </div>
+        <SyncRunDetailsContent entities={entities} message={syncRun.message} />
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface Entity {
+  name: string;
+  total: number;
+  added: number;
+  updated: number;
+  skipped: number;
+}
+
+function SyncRunDetailsContent({
+  entities,
+  message,
+  className,
+}: {
+  entities: Entity[];
+  message?: string | null;
+  className?: string;
+}) {
+  return (
+    <div className={cn("space-y-4 mt-4", className)}>
+      {entities.map((entity) => (
+        <div key={entity.name} className="border rounded-lg p-4">
+          <div className="font-medium mb-2">{entity.name}</div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="text-muted-foreground">Totalt:</div>
+            <div className="font-medium">{entity.total}</div>
+
+            <div className="text-muted-foreground">Lagt til:</div>
+            <div className="text-green-600 dark:text-green-400 font-medium">
+              {entity.added}
+            </div>
+
+            <div className="text-muted-foreground">Oppdatert:</div>
+            <div className="text-blue-600 dark:text-blue-400 font-medium">
+              {entity.updated}
+            </div>
+
+            <div className="text-muted-foreground">Hoppet over:</div>
+            <div className="text-gray-600 dark:text-gray-400 font-medium">
+              {entity.skipped}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {message && (
+        <div className="space-y-2">
+          <div className="font-medium text-sm">Melding:</div>
+          <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-xs font-mono border">
+            <code>{message}</code>
+          </pre>
+        </div>
+      )}
+    </div>
   );
 }
