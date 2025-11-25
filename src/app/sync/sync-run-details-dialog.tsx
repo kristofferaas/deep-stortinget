@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { InferQueryResult, cn } from "@/lib/utils";
 import { api } from "../../../convex/_generated/api";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SyncRun = InferQueryResult<typeof api.sync.workflow.getSyncRuns>[number];
 
@@ -33,7 +33,7 @@ interface SyncRunDetailsDialogProps {
 
 export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
   const [open, setOpen] = React.useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isMobile = useIsMobile();
 
   const entities = [
     {
@@ -66,56 +66,53 @@ export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
     },
   ];
 
-  if (isDesktop) {
+  if (isMobile) {
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <Info className="h-4 w-4" />
           </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Synkroniseringsdetaljer</DialogTitle>
-            <DialogDescription>
+        </DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Synkroniseringsdetaljer</DrawerTitle>
+            <DrawerDescription>
               Detaljert oversikt over synkroniseringen
-            </DialogDescription>
-          </DialogHeader>
+            </DrawerDescription>
+          </DrawerHeader>
           <SyncRunDetailsContent
             entities={entities}
             message={syncRun.message}
+            className="px-4"
           />
-        </DialogContent>
-      </Dialog>
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button variant="outline">Lukk</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     );
   }
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Info className="h-4 w-4" />
         </Button>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="text-left">
-          <DrawerTitle>Synkroniseringsdetaljer</DrawerTitle>
-          <DrawerDescription>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Synkroniseringsdetaljer</DialogTitle>
+          <DialogDescription>
             Detaljert oversikt over synkroniseringen
-          </DrawerDescription>
-        </DrawerHeader>
-        <SyncRunDetailsContent
-          entities={entities}
-          message={syncRun.message}
-          className="px-4"
-        />
-        <DrawerFooter className="pt-2">
-          <DrawerClose asChild>
-            <Button variant="outline">Lukk</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+          </DialogDescription>
+        </DialogHeader>
+        <SyncRunDetailsContent entities={entities} message={syncRun.message} />
+      </DialogContent>
+    </Dialog>
   );
 }
 
