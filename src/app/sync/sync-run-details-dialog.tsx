@@ -81,7 +81,10 @@ export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
               Detaljert oversikt over synkroniseringen
             </DialogDescription>
           </DialogHeader>
-          <SyncRunDetailsContent entities={entities} message={syncRun.message} />
+          <SyncRunDetailsContent
+            entities={entities}
+            message={syncRun.message}
+          />
         </DialogContent>
       </Dialog>
     );
