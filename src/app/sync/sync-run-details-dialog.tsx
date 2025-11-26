@@ -11,10 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -81,17 +79,12 @@ export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
               Detaljert oversikt over synkroniseringen
             </DrawerDescription>
           </DrawerHeader>
-          <div className="overflow-y-auto max-h-[60vh] px-4">
+          <div className="overflow-y-auto max-h-[60vh] px-4 pb-4">
             <SyncRunDetailsContent
               entities={entities}
               message={syncRun.message}
             />
           </div>
-          <DrawerFooter className="pt-2">
-            <DrawerClose asChild>
-              <Button variant="outline">Lukk</Button>
-            </DrawerClose>
-          </DrawerFooter>
         </DrawerContent>
       </Drawer>
     );
