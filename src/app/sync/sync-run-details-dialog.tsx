@@ -81,11 +81,12 @@ export function SyncRunDetailsDialog({ syncRun }: SyncRunDetailsDialogProps) {
               Detaljert oversikt over synkroniseringen
             </DrawerDescription>
           </DrawerHeader>
-          <SyncRunDetailsContent
-            entities={entities}
-            message={syncRun.message}
-            className="px-4"
-          />
+          <div className="overflow-y-auto max-h-[60vh] px-4">
+            <SyncRunDetailsContent
+              entities={entities}
+              message={syncRun.message}
+            />
+          </div>
           <DrawerFooter className="pt-2">
             <DrawerClose asChild>
               <Button variant="outline">Lukk</Button>
@@ -135,39 +136,44 @@ function SyncRunDetailsContent({
 }) {
   return (
     <div className={cn("space-y-4 mt-4", className)}>
-      {entities.map((entity) => (
-        <div key={entity.name} className="border rounded-lg p-4">
-          <div className="font-medium mb-2">{entity.name}</div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="text-muted-foreground">Totalt:</div>
-            <div className="font-medium">{entity.total}</div>
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="text-left p-3 font-medium">Type</th>
+              <th className="text-right p-3 font-medium">Lagt til</th>
+              <th className="text-right p-3 font-medium">Oppdatert</th>
+              <th className="text-right p-3 font-medium">Hoppet over</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entities.map((entity, index) => (
+              <tr
+                key={entity.name}
+                className={index !== entities.length - 1 ? "border-b" : ""}
+              >
+                <td className="p-3 font-medium">{entity.name}</td>
+                <td className="p-3 text-right text-green-600 dark:text-green-400 font-medium">
+                  {entity.added}
+                </td>
+                <td className="p-3 text-right text-blue-600 dark:text-blue-400 font-medium">
+                  {entity.updated}
+                </td>
+                <td className="p-3 text-right text-gray-600 dark:text-gray-400 font-medium">
+                  {entity.skipped}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-            <div className="text-muted-foreground">Lagt til:</div>
-            <div className="text-green-600 dark:text-green-400 font-medium">
-              {entity.added}
-            </div>
-
-            <div className="text-muted-foreground">Oppdatert:</div>
-            <div className="text-blue-600 dark:text-blue-400 font-medium">
-              {entity.updated}
-            </div>
-
-            <div className="text-muted-foreground">Hoppet over:</div>
-            <div className="text-gray-600 dark:text-gray-400 font-medium">
-              {entity.skipped}
-            </div>
-          </div>
-        </div>
-      ))}
-
-      {message && (
-        <div className="space-y-2">
-          <div className="font-medium text-sm">Melding:</div>
-          <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-xs font-mono border">
-            <code>{message}</code>
-          </pre>
-        </div>
-      )}
+      <div className="space-y-2">
+        <div className="font-medium text-sm">Melding:</div>
+        <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-xs font-mono border min-h-[60px] flex items-center">
+          <code>{message || "Ingen melding"}</code>
+        </pre>
+      </div>
     </div>
   );
 }
