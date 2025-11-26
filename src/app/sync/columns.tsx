@@ -137,7 +137,18 @@ export const columns: ColumnDef<SyncRun>[] = [
   },
   {
     id: "added",
-    header: "Lagt til",
+    header: ({ column }) => {
+      return (
+        <button
+          className="flex items-center gap-1 hover:text-foreground"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Lagt til
+          {column.getIsSorted() === "asc" && <span>↑</span>}
+          {column.getIsSorted() === "desc" && <span>↓</span>}
+        </button>
+      );
+    },
     accessorFn: (row) => {
       const total =
         (row.partiesAdded ?? 0) +
@@ -161,7 +172,18 @@ export const columns: ColumnDef<SyncRun>[] = [
   },
   {
     id: "updated",
-    header: "Oppdatert",
+    header: ({ column }) => {
+      return (
+        <button
+          className="flex items-center gap-1 hover:text-foreground"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Oppdatert
+          {column.getIsSorted() === "asc" && <span>↑</span>}
+          {column.getIsSorted() === "desc" && <span>↓</span>}
+        </button>
+      );
+    },
     accessorFn: (row) => {
       const total =
         (row.partiesUpdated ?? 0) +
@@ -185,7 +207,18 @@ export const columns: ColumnDef<SyncRun>[] = [
   },
   {
     id: "skipped",
-    header: "Hoppet over",
+    header: ({ column }) => {
+      return (
+        <button
+          className="flex items-center gap-1 hover:text-foreground"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Hoppet over
+          {column.getIsSorted() === "asc" && <span>↑</span>}
+          {column.getIsSorted() === "desc" && <span>↓</span>}
+        </button>
+      );
+    },
     accessorFn: (row) => {
       const total =
         (row.partiesSkipped ?? 0) +

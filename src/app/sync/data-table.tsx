@@ -3,7 +3,9 @@
 import {
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   RowSelectionState,
+  SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
@@ -49,6 +51,12 @@ export function DataTable() {
   };
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [sorting, setSorting] = useState<SortingState>([
+    {
+      id: "startedAt",
+      desc: true,
+    },
+  ]);
   const selectedIds = Object.keys(rowSelection) as Id<"syncRuns">[];
 
   // Handle delete selected runs
@@ -68,9 +76,12 @@ export function DataTable() {
     data: data ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
     state: {
       rowSelection,
+      sorting,
     },
     enableRowSelection: true,
     getRowId: (row) => {
