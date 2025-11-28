@@ -5,6 +5,7 @@ import ConvexClientProvider from "./convex-provider";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AppHeader } from "@/components/app-header";
 import { GloablChatProvider } from "@/components/global-chat/global-chat-provider";
+import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,22 +32,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-dvh`}
       >
-        <ConvexClientProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <GloablChatProvider>
-              <AppHeader />
-              <main>
-                <div className="h-14" />
-                {children}
-              </main>
-            </GloablChatProvider>
-          </ThemeProvider>
-        </ConvexClientProvider>
+        <AuthKitProvider>
+          <ConvexClientProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <GloablChatProvider>
+                <AppHeader />
+                <main className="bg-background h-dvh">
+                  <div className="h-14" />
+                  {children}
+                </main>
+              </GloablChatProvider>
+            </ThemeProvider>
+          </ConvexClientProvider>
+        </AuthKitProvider>
       </body>
     </html>
   );

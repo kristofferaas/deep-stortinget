@@ -2,13 +2,14 @@
 
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { useScrollVisibility } from "@/hooks/use-scroll-visibility";
-import { ArrowRight, Menu, Settings, User, X } from "lucide-react";
+import { ArrowRight, LogOut, Menu, Settings, User, X } from "lucide-react";
 import Link from "next/link";
 import { Drawer } from "vaul";
 import { HeaderDrawer } from "./header-drawer";
 import { HeaderDrawerClose } from "./header-drawer-close";
 import { HeaderDrawerContent } from "./header-drawer-content";
 import { HeaderDrawerTrigger } from "./header-drawer-trigger";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 
 import {
   HeaderDrawerSection,
@@ -24,6 +25,7 @@ const navigationLinks = [
 
 export function AppHeader() {
   const isVisible = useScrollVisibility();
+  const { user, signOut } = useAuth();
 
   return (
     <HeaderDrawer>
@@ -92,7 +94,18 @@ export function AppHeader() {
             >
               <User className="size-4" />
             </button>
-            Guest user
+            {user?.email}
+            <button
+              onClick={() =>
+                signOut({
+                  returnTo: "/",
+                })
+              }
+              type="button"
+              className="flex-shrink-0 w-9 h-9 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-all duration-200 flex items-center justify-center"
+            >
+              <LogOut className="size-4" />
+            </button>
           </HeaderDrawerSectionContent>
         </HeaderDrawerSection>
 
