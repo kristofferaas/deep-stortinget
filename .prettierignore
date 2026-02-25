@@ -1,8 +1,0 @@
-# Auto-generated files
-convex/_generated/
-**/_generated/
-**/node_modules/
-**/.next/
-**/dist/
-**/build/
-pnpm-lock.yaml
