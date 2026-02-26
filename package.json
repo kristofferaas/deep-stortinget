@@ -8,7 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "check": "tsc --noEmit",
+    "check": "tsgo --noEmit",
     "dev": "vite dev",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
