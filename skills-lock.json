@@ -66,6 +66,11 @@
       "sourceType": "github",
       "computedHash": "b53e061304bb81d037c6dd4e38762d27a596523bcbeab43c58e0b05140449802"
     },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
     "tanstack-integration-best-practices": {
       "source": "deckardger/tanstack-agent-skills",
       "sourceType": "github",
@@ -85,6 +90,11 @@
       "source": "deckardger/tanstack-agent-skills",
       "sourceType": "github",
       "computedHash": "50c1b6d9b35b05927fa0c81962d560634385c9567b7b1d66396b171965b33105"
+    },
+    "vercel-composition-patterns": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "f98931159fa9c7fed043bcd18a891a46dcf89ababa38df13a4c5b7b30dc0ce07"
     }
   }
 }
