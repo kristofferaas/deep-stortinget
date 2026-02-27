@@ -1,9 +1,11 @@
-/// <reference types="vite/client" />
-import type { ReactNode } from "react";
+import { QueryClient } from "@tanstack/react-query";
+import { createRootRouteWithContext } from "@tanstack/react-router";
+import { Outlet, Scripts, HeadContent } from "@tanstack/react-router";
+import * as React from "react";
 
-import { Outlet, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient;
+}>()({
   head: () => ({
     meta: [
       {
@@ -29,7 +31,7 @@ function RootComponent() {
   );
 }
 
-function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html>
       <head>
