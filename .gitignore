@@ -1,4 +1,5 @@
 node_modules
 .tanstack
 .output
+.pnpm-store
 .env.local

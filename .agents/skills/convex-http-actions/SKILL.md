@@ -72,21 +72,18 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     // Parse JSON body
     const body = await request.json();
-    
+
     // Access headers
     const authHeader = request.headers.get("Authorization");
-    
+
     // Access URL parameters
     const url = new URL(request.url);
     const queryParam = url.searchParams.get("filter");
 
-    return new Response(
-      JSON.stringify({ received: body, filter: queryParam }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ received: body, filter: queryParam }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -99,13 +96,10 @@ http.route({
     const name = formData.get("name");
     const email = formData.get("email");
 
-    return new Response(
-      JSON.stringify({ name, email }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ name, email }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -116,18 +110,15 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     const bytes = await request.bytes();
     const contentType = request.headers.get("Content-Type") ?? "application/octet-stream";
-    
+
     // Store in Convex storage
     const blob = new Blob([bytes], { type: contentType });
     const storageId = await ctx.storage.store(blob);
 
-    return new Response(
-      JSON.stringify({ storageId }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ storageId }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -154,13 +145,10 @@ http.route({
     // Extract user ID from path: /api/users/123 -> "123"
     const userId = url.pathname.replace("/api/users/", "");
 
-    return new Response(
-      JSON.stringify({ userId }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ userId }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -203,16 +191,13 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     const body = await request.json();
 
-    return new Response(
-      JSON.stringify({ success: true, data: body }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, data: body }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
+    });
   }),
 });
 
@@ -262,7 +247,7 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     const event = request.headers.get("X-GitHub-Event");
     const signature = request.headers.get("X-Hub-Signature-256");
-    
+
     if (!signature) {
       return new Response("Missing signature", { status: 400 });
     }
@@ -305,11 +290,7 @@ export const verifyAndProcessWebhook = internalAction({
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
     // Verify signature
-    const event = stripe.webhooks.constructEvent(
-      args.body,
-      args.signature,
-      webhookSecret
-    );
+    const event = stripe.webhooks.constructEvent(args.body, args.signature, webhookSecret);
 
     // Process based on event type
     switch (event.type) {
@@ -349,12 +330,12 @@ http.route({
   method: "GET",
   handler: httpAction(async (ctx, request) => {
     const apiKey = request.headers.get("X-API-Key");
-    
+
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "Missing API key" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing API key" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Validate API key
@@ -363,19 +344,19 @@ http.route({
     });
 
     if (!isValid) {
-      return new Response(
-        JSON.stringify({ error: "Invalid API key" }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid API key" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Process authenticated request
     const data = await ctx.runQuery(internal.data.getProtectedData, {});
 
-    return new Response(
-      JSON.stringify(data),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -385,12 +366,12 @@ http.route({
   method: "GET",
   handler: httpAction(async (ctx, request) => {
     const authHeader = request.headers.get("Authorization");
-    
+
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Missing or invalid Authorization header" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing or invalid Authorization header" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const token = authHeader.slice(7);
@@ -399,16 +380,16 @@ http.route({
     const user = await ctx.runQuery(internal.auth.validateToken, { token });
 
     if (!user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    return new Response(
-      JSON.stringify(user),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify(user), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -440,10 +421,10 @@ http.route({
     // Query the created item
     const item = await ctx.runQuery(internal.items.get, { id: itemId });
 
-    return new Response(
-      JSON.stringify(item),
-      { status: 201, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify(item), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -456,10 +437,10 @@ http.route({
 
     const items = await ctx.runQuery(internal.items.list, { limit });
 
-    return new Response(
-      JSON.stringify(items),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify(items), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }),
 });
 
@@ -685,10 +666,7 @@ export default defineSchema({
     eventType: v.string(),
     payload: v.any(),
     processedAt: v.number(),
-    status: v.union(
-      v.literal("success"),
-      v.literal("failed")
-    ),
+    status: v.union(v.literal("success"), v.literal("failed")),
     error: v.optional(v.string()),
   })
     .index("by_source", ["source"])

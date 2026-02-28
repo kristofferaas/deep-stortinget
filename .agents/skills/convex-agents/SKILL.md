@@ -79,11 +79,13 @@ export const createThread = mutation({
 // List user's threads
 export const listThreads = query({
   args: { userId: v.id("users") },
-  returns: v.array(v.object({
-    _id: v.id("threads"),
-    title: v.string(),
-    lastMessageAt: v.optional(v.number()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("threads"),
+      title: v.string(),
+      lastMessageAt: v.optional(v.number()),
+    }),
+  ),
   handler: async (ctx, args) => {
     return await agent.listThreads(ctx, {
       userId: args.userId,
@@ -94,11 +96,13 @@ export const listThreads = query({
 // Get thread messages
 export const getMessages = query({
   args: { threadId: v.id("threads") },
-  returns: v.array(v.object({
-    role: v.string(),
-    content: v.string(),
-    createdAt: v.number(),
-  })),
+  returns: v.array(
+    v.object({
+      role: v.string(),
+      content: v.string(),
+      createdAt: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     return await agent.getMessages(ctx, {
       threadId: args.threadId,
@@ -209,7 +213,7 @@ export const getWeather = tool({
   }),
   handler: async (ctx, args) => {
     const response = await fetch(
-      `https://api.weather.com/current?location=${encodeURIComponent(args.location)}`
+      `https://api.weather.com/current?location=${encodeURIComponent(args.location)}`,
     );
     return await response.json();
   },
@@ -261,10 +265,12 @@ export const addDocument = mutation({
   args: {
     title: v.string(),
     content: v.string(),
-    metadata: v.optional(v.object({
-      source: v.optional(v.string()),
-      category: v.optional(v.string()),
-    })),
+    metadata: v.optional(
+      v.object({
+        source: v.optional(v.string()),
+        category: v.optional(v.string()),
+      }),
+    ),
   },
   returns: v.id("documents"),
   handler: async (ctx, args) => {
@@ -287,12 +293,14 @@ export const search = query({
     query: v.string(),
     limit: v.optional(v.number()),
   },
-  returns: v.array(v.object({
-    _id: v.id("documents"),
-    title: v.string(),
-    content: v.string(),
-    score: v.number(),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("documents"),
+      title: v.string(),
+      content: v.string(),
+      score: v.number(),
+    }),
+  ),
   handler: async (ctx, args) => {
     const results = await agent.search(ctx, {
       query: args.query,
@@ -348,12 +356,14 @@ export const researchTopic = action({
 
     // Step 2: Analyze and synthesize
     const analysis = await agent.chat(ctx, {
-      messages: [{
-        role: "user",
-        content: `Analyze these sources about "${args.topic}" and provide a comprehensive summary:\n\n${
-          searchResults.map((r) => r.content).join("\n\n---\n\n")
-        }`,
-      }],
+      messages: [
+        {
+          role: "user",
+          content: `Analyze these sources about "${args.topic}" and provide a comprehensive summary:\n\n${searchResults
+            .map((r) => r.content)
+            .join("\n\n---\n\n")}`,
+        },
+      ],
       systemPrompt: "You are a research assistant. Provide thorough, well-cited analysis.",
     });
 
@@ -364,10 +374,12 @@ export const researchTopic = action({
     });
 
     const insights = await agent.chat(ctx, {
-      messages: [{
-        role: "user",
-        content: `Based on this analysis, list 5 key insights:\n\n${analysis.content}`,
-      }],
+      messages: [
+        {
+          role: "user",
+          content: `Based on this analysis, list 5 key insights:\n\n${analysis.content}`,
+        },
+      ],
     });
 
     // Save final results
@@ -404,11 +416,15 @@ export default defineSchema({
     threadId: v.id("threads"),
     role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
     content: v.string(),
-    toolCalls: v.optional(v.array(v.object({
-      name: v.string(),
-      arguments: v.any(),
-      result: v.optional(v.any()),
-    }))),
+    toolCalls: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          arguments: v.any(),
+          result: v.optional(v.any()),
+        }),
+      ),
+    ),
     createdAt: v.number(),
   }).index("by_thread", ["threadId"]),
 
