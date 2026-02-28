@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": [],
+  "ignorePatterns": ["routeTree.gen.ts", "convex/_generated"],
   "sortImports": {
     // The same order as eslint-plugin-perfectionist/sort-imports default.
     "groups": [
