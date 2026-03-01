@@ -1,7 +1,7 @@
 import { convexQuery, useConvexAction, useConvexMutation } from "@convex-dev/react-query";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import { api } from "../../../convex/_generated/api";
 import {
@@ -13,17 +13,16 @@ import {
   threadTitleFallback,
 } from "../../components/thread-chat-layout";
 
-export const Route = createFileRoute("/_authenticated/threads/$threadId")({
-  component: ThreadPage,
+export const Route = createFileRoute("/_authenticated/threads/")({
+  component: ThreadsIndexPage,
 });
 
-function ThreadPage() {
+function ThreadsIndexPage() {
   const navigate = useNavigate();
-  const { threadId } = Route.useParams();
-
   const createThreadFn = useConvexMutation(api.chat.createThread);
   const deleteThreadFn = useConvexMutation(api.chat.deleteThread);
   const sendMessageFn = useConvexAction(api.chat.sendMessage);
+
   const createThreadMutation = useMutation({ mutationFn: createThreadFn });
   const deleteThreadMutation = useMutation({ mutationFn: deleteThreadFn });
   const sendMessageMutation = useMutation({ mutationFn: sendMessageFn });
@@ -31,65 +30,25 @@ function ThreadPage() {
     ...convexQuery(api.chat.listThreads),
     placeholderData: [],
   });
-  const { data: threadRecord, isPending: isThreadRecordPending } = useQuery(
-    convexQuery(api.chat.getThread, { threadId }),
-  );
-  const safeThreads = threads ?? [];
 
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (isThreadRecordPending) {
-      return;
-    }
-
-    if (threadRecord) {
-      return;
-    }
-
-    if (safeThreads.length > 0) {
-      void navigate({
-        to: "/threads/$threadId",
-        params: { threadId: safeThreads[0].id },
-        replace: true,
-      });
-      return;
-    }
-
-    void navigate({ to: "/threads", replace: true });
-  }, [isThreadRecordPending, navigate, safeThreads, threadRecord]);
-
-  const { data: messages } = useQuery({
-    ...convexQuery(api.chat.listMessages, { threadId }),
-    placeholderData: [],
-  });
-
-  const displayedMessages = messages ?? [];
-
-  const isSending = sendMessageMutation.isPending;
-  const isCreatingThread = createThreadMutation.isPending;
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [displayedMessages, threadId]);
+  const isStartingThread = createThreadMutation.isPending;
 
   const canSend = useMemo(
-    () => Boolean(prompt.trim().length > 0 && !isSending),
-    [isSending, prompt],
+    () => Boolean(prompt.trim().length > 0 && !isStartingThread),
+    [isStartingThread, prompt],
   );
 
   async function onCreateThread() {
-    if (isCreatingThread) {
+    if (createThreadMutation.isPending) {
       return;
     }
 
     setError(null);
     try {
       const newThreadId = await createThreadMutation.mutateAsync({ title: threadTitleFallback() });
-      setPrompt("");
       await navigate({ to: "/threads/$threadId", params: { threadId: newThreadId } });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create thread.");
@@ -98,33 +57,36 @@ function ThreadPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!prompt.trim() || isSending) {
+    if (!prompt.trim() || isStartingThread) {
       return;
     }
 
     const message = prompt.trim();
     setPrompt("");
     setError(null);
+
     try {
-      await sendMessageMutation.mutateAsync({ threadId, prompt: message });
+      const threadId = await createThreadMutation.mutateAsync({ title: threadTitleFallback() });
+      await navigate({ to: "/threads/$threadId", params: { threadId } });
+
+      void sendMessageMutation
+        .mutateAsync({ threadId, prompt: message })
+        .catch((sendError: unknown) => {
+          console.error("Failed to send initial message:", sendError);
+        });
     } catch (err: unknown) {
       setPrompt(message);
-      setError(err instanceof Error ? err.message : "Failed to send message.");
+      setError(err instanceof Error ? err.message : "Failed to start a new thread.");
     }
   }
 
-  async function onDeleteThread(targetThreadId: string) {
+  async function onDeleteThread(threadId: string) {
     if (deleteThreadMutation.isPending) {
       return;
     }
-
     setError(null);
     try {
-      await deleteThreadMutation.mutateAsync({ threadId: targetThreadId });
-
-      if (targetThreadId === threadId) {
-        await navigate({ to: "/threads", replace: true });
-      }
+      await deleteThreadMutation.mutateAsync({ threadId });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to delete thread.");
     }
@@ -134,27 +96,34 @@ function ThreadPage() {
     <main className="chat-shell">
       <ChatStyles />
       <ThreadsSidebar
-        threads={safeThreads}
-        activeThreadId={threadId}
-        isCreatingThread={isCreatingThread}
+        threads={threads ?? []}
+        activeThreadId={null}
+        isCreatingThread={createThreadMutation.isPending}
         deletingThreadId={
           deleteThreadMutation.isPending ? (deleteThreadMutation.variables?.threadId ?? null) : null
         }
         onCreateThread={onCreateThread}
-        onSelectThread={(nextThreadId) =>
-          void navigate({ to: "/threads/$threadId", params: { threadId: nextThreadId } })
+        onSelectThread={(threadId) =>
+          void navigate({ to: "/threads/$threadId", params: { threadId } })
         }
         onDeleteThread={onDeleteThread}
       />
       <section className="chat-main">
         <ChatHeader />
-        <MessagesPane messages={displayedMessages} bottomRef={bottomRef} />
+        <MessagesPane
+          messages={undefined}
+          emptyState={
+            <div className="message assistant">
+              Ask your first question to create a new chat thread.
+            </div>
+          }
+        />
         <Composer
           prompt={prompt}
-          isSending={isSending}
+          isSending={isStartingThread}
           canSend={canSend}
           error={error}
-          placeholder="Ask something…"
+          placeholder="Ask something to start a new chat…"
           onSubmit={onSubmit}
           onPromptChange={setPrompt}
         />

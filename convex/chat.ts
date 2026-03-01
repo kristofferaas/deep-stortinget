@@ -74,6 +74,37 @@ export const listThreads = query({
   },
 });
 
+export const getThread = query({
+  args: { threadId: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      id: v.string(),
+      title: v.string(),
+      summary: v.optional(v.string()),
+      createdAt: v.number(),
+      status: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const thread = await ctx.runQuery(components.agent.threads.getThread, {
+      threadId: args.threadId,
+    });
+
+    if (!thread) {
+      return null;
+    }
+
+    return {
+      id: thread._id,
+      title: thread.title ?? "Untitled chat",
+      summary: thread.summary,
+      createdAt: thread._creationTime,
+      status: thread.status,
+    };
+  },
+});
+
 export const listMessages = query({
   args: { threadId: v.string() },
   returns: v.array(
@@ -125,6 +156,19 @@ export const sendMessage = action({
       messages: [{ role: "user", content: prompt }],
     });
 
+    return null;
+  },
+});
+
+export const deleteThread = mutation({
+  args: {
+    threadId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await chatAgent.deleteThreadAsync(ctx, {
+      threadId: args.threadId,
+    });
     return null;
   },
 });
