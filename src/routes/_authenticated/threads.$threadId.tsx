@@ -1,11 +1,11 @@
 import { convexQuery, useConvexAction, useConvexMutation } from "@convex-dev/react-query";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
-import { api } from "../../convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
 
-export const Route = createFileRoute("/threads/$threadId")({
+export const Route = createFileRoute("/_authenticated/threads/$threadId")({
   component: ThreadRoute,
 });
 
@@ -110,9 +110,7 @@ function ThreadPage() {
     window.localStorage.setItem("deep-stortinget-thread-id", threadId);
   }, [threadId]);
 
-  const { data: messages, isPending: isMessagesPending } = useQuery(
-    convexQuery(api.chat.listMessages, { threadId }),
-  );
+  const { data: messages } = useSuspenseQuery(convexQuery(api.chat.listMessages, { threadId }));
 
   const isSending = sendMessageMutation.isPending;
   const isCreatingThread = createThreadMutation.isPending;
@@ -171,12 +169,7 @@ function ThreadPage() {
       />
       <section className="chat-main">
         <ChatHeader />
-        <MessagesPane
-          messages={messages}
-          threadId={threadId}
-          isMessagesPending={isMessagesPending}
-          bottomRef={bottomRef}
-        />
+        <MessagesPane messages={messages} threadId={threadId} bottomRef={bottomRef} />
         <Composer
           prompt={prompt}
           threadId={threadId}
@@ -270,18 +263,15 @@ function ChatHeader() {
 function MessagesPane({
   messages,
   threadId,
-  isMessagesPending,
   bottomRef,
 }: {
   messages: MessageListItem[] | undefined;
   threadId: string | null;
-  isMessagesPending: boolean;
   bottomRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
     <section className="messages" aria-live="polite">
       {!threadId && <div className="message assistant">Pick a thread or create a new one.</div>}
-      {threadId && isMessagesPending && <div className="message assistant">Loading messages…</div>}
       {messages?.map((message) => (
         <MessageBubble key={message.id} message={message} />
       ))}

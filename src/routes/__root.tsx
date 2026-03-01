@@ -1,7 +1,14 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext } from "@tanstack/react-router";
-import { Outlet, Scripts, HeadContent } from "@tanstack/react-router";
-import * as React from "react";
+import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import {
+  AuthKitProvider,
+  getAuthAction,
+  useAccessToken,
+  useAuth,
+} from "@workos/authkit-tanstack-react-start/client";
+import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
+import { useCallback, useState } from "react";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -20,13 +27,36 @@ export const Route = createRootRouteWithContext<{
       },
     ],
   }),
+  loader: async () => {
+    // getAuthAction() returns auth state without accessToken, safe for client
+    // Pass to AuthKitProvider as initialAuth to avoid loading flicker
+    const auth = await getAuthAction();
+    return {
+      auth,
+    };
+  },
   component: RootComponent,
+  notFoundComponent: () => <div>Not Found</div>,
 });
 
 function RootComponent() {
+  const { auth } = Route.useLoaderData();
+
+  const [convex] = useState(() => {
+    const convexUrl = import.meta.env.VITE_CONVEX_URL;
+    return new ConvexReactClient(convexUrl);
+  });
+
   return (
     <RootDocument>
-      <Outlet />
+      <AuthKitProvider initialAuth={auth}>
+        <ConvexProviderWithAuth client={convex} useAuth={useAuthFromAuthKit}>
+          <main>
+            <Outlet />
+          </main>
+          <TanStackRouterDevtools position="bottom-right" />
+        </ConvexProviderWithAuth>
+      </AuthKitProvider>
     </RootDocument>
   );
 }
@@ -43,4 +73,37 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </body>
     </html>
   );
+}
+
+function useAuthFromAuthKit() {
+  const { user, loading: isLoading } = useAuth();
+  const { getAccessToken, refresh } = useAccessToken();
+
+  const isAuthenticated = !!user;
+
+  const fetchAccessToken = useCallback(
+    async ({ forceRefreshToken }: { forceRefreshToken?: boolean } = {}) => {
+      if (!user) {
+        return null;
+      }
+
+      try {
+        if (forceRefreshToken) {
+          return (await refresh()) ?? null;
+        }
+
+        return (await getAccessToken()) ?? null;
+      } catch (error) {
+        console.error("Failed to get access token:", error);
+        return null;
+      }
+    },
+    [user, refresh, getAccessToken],
+  );
+
+  return {
+    isLoading,
+    isAuthenticated,
+    fetchAccessToken,
+  };
 }
