@@ -1,4 +1,4 @@
-import { FormEvent } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useState } from "react";
 
 export type ThreadListItem = { id: string; title: string; createdAt: number };
 
@@ -26,40 +26,47 @@ export function threadTitleFallback(): string {
   }).format(new Date())}`;
 }
 
-export function ChatStyles() {
-  return <style>{CHAT_STYLES}</style>;
-}
-
 export function ThreadsSidebar({
   threads,
   activeThreadId,
   isCreatingThread,
   deletingThreadId,
+  renamingThreadId,
   onCreateThread,
   onSelectThread,
   onDeleteThread,
+  onRenameThread,
 }: {
   threads: ThreadListItem[];
   activeThreadId: string | null;
   isCreatingThread: boolean;
   deletingThreadId: string | null;
+  renamingThreadId: string | null;
   onCreateThread: () => void;
   onSelectThread: (threadId: string) => void;
   onDeleteThread: (threadId: string) => void;
+  onRenameThread: (threadId: string, title: string) => Promise<void>;
 }) {
   return (
-    <aside className="panel" aria-label="Threads panel">
-      <h2 className="sidebar-title">All Threads</h2>
+    <aside
+      className="grid min-h-0 grid-rows-[auto_auto_1fr] gap-2.5 rounded-2xl border border-line/90 bg-paper/85 p-3 backdrop-blur-sm"
+      aria-label="Threads panel"
+    >
+      <h2 className="m-0 font-display text-[1.05rem]">All Threads</h2>
       <button
-        className="new-thread"
+        className="min-h-10 cursor-pointer rounded-xl border border-[#cdbf9f] bg-[#fffdf8] font-bold text-ink transition-colors hover:not-disabled:bg-[#faf5ea] disabled:cursor-not-allowed disabled:bg-[#ece7dc]"
         type="button"
         onClick={onCreateThread}
         disabled={isCreatingThread}
       >
         {isCreatingThread ? "Creating…" : "+ New Thread"}
       </button>
-      <div className="thread-list">
-        {threads.length === 0 && <div className="empty">No threads yet.</div>}
+      <div className="flex min-h-0 flex-col gap-2 overflow-auto pr-0.5">
+        {threads.length === 0 && (
+          <div className="rounded-xl border border-dashed border-[#d7cdb8] bg-[#f3efe6] px-3 py-2.5 text-sm">
+            No threads yet.
+          </div>
+        )}
         {threads.map((thread) => (
           <ThreadItem
             key={thread.id}
@@ -67,7 +74,10 @@ export function ThreadsSidebar({
             isActive={thread.id === activeThreadId}
             onSelect={onSelectThread}
             onDelete={onDeleteThread}
+            onRename={onRenameThread}
             isDeleting={deletingThreadId === thread.id}
+            isRenaming={renamingThreadId === thread.id}
+            hasPendingRename={renamingThreadId !== null}
           />
         ))}
       </div>
@@ -80,43 +90,123 @@ function ThreadItem({
   isActive,
   onSelect,
   onDelete,
+  onRename,
   isDeleting,
+  isRenaming,
+  hasPendingRename,
 }: {
   thread: ThreadListItem;
   isActive: boolean;
   onSelect: (threadId: string) => void;
   onDelete: (threadId: string) => void;
+  onRename: (threadId: string, title: string) => Promise<void>;
   isDeleting: boolean;
+  isRenaming: boolean;
+  hasPendingRename: boolean;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(thread.title);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraftTitle(thread.title);
+    }
+  }, [isEditing, thread.title]);
+
+  const disableActions = isDeleting || hasPendingRename;
+  const cardClassName = `w-full rounded-xl border px-2.5 py-2.5 pr-[4.625rem] text-left transition-colors ${
+    isActive ? "border-line-strong bg-[#efe7d8]" : "border-line bg-[#fffdf8]"
+  }`;
+
+  async function onRenameSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isDeleting || isRenaming) {
+      return;
+    }
+
+    const nextTitle = draftTitle.trim();
+    if (!nextTitle) {
+      setDraftTitle(thread.title);
+      return;
+    }
+
+    if (nextTitle === thread.title) {
+      setIsEditing(false);
+      return;
+    }
+
+    await onRename(thread.id, nextTitle);
+    setIsEditing(false);
+  }
+
+  function onRenameInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      setDraftTitle(thread.title);
+      setIsEditing(false);
+    }
+  }
+
   return (
-    <div className="thread-item-wrap">
-      <button
-        className={`thread-item ${isActive ? "active" : ""}`}
-        type="button"
-        onClick={() => onSelect(thread.id)}
-      >
-        <div className="thread-name">{thread.title}</div>
-        <div className="thread-meta">{formatThreadTime(thread.createdAt)}</div>
-      </button>
-      <button
-        className="thread-delete"
-        type="button"
-        aria-label={`Delete thread ${thread.title}`}
-        title="Delete thread"
-        disabled={isDeleting}
-        onClick={() => onDelete(thread.id)}
-      >
-        {isDeleting ? "…" : "×"}
-      </button>
+    <div className="group relative">
+      {isEditing ? (
+        <form className={`${cardClassName} cursor-default`} onSubmit={onRenameSubmit}>
+          <input
+            className="w-full rounded-lg border border-[#cdbf9f] bg-[#fffdf9] px-2.5 py-2 text-[0.98rem] font-bold text-ink transition-shadow outline-none focus:border-accent focus:shadow-[0_0_0_2px_rgba(29,106,82,0.12)]"
+            value={draftTitle}
+            onChange={(event) => setDraftTitle(event.target.value)}
+            onKeyDown={onRenameInputKeyDown}
+            aria-label={`Rename thread ${thread.title}`}
+            autoFocus
+            disabled={isRenaming}
+          />
+          <div className="mt-1 text-[0.84rem] text-[#5a554a]">
+            {formatThreadTime(thread.createdAt)}
+          </div>
+        </form>
+      ) : (
+        <button
+          className={`${cardClassName} cursor-pointer`}
+          type="button"
+          onClick={() => onSelect(thread.id)}
+        >
+          <div className="leading-tight font-bold">{thread.title}</div>
+          <div className="mt-1 text-[0.84rem] text-[#5a554a]">
+            {formatThreadTime(thread.createdAt)}
+          </div>
+        </button>
+      )}
+
+      <div className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 gap-1.5 opacity-0 transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100">
+        <button
+          className="size-6 cursor-pointer rounded-md border border-[#d8ccb4] bg-[#fff9f0] text-[0.95rem] leading-none text-[#3b4b67] transition-colors hover:not-disabled:border-[#9fb3d7] hover:not-disabled:bg-[#e8effd] disabled:cursor-not-allowed"
+          type="button"
+          aria-label={`Edit thread ${thread.title}`}
+          title="Edit thread"
+          disabled={disableActions || isEditing}
+          onClick={() => setIsEditing(true)}
+        >
+          ✎
+        </button>
+        <button
+          className="size-6 cursor-pointer rounded-md border border-[#d8ccb4] bg-[#fff9f0] text-[1rem] leading-none text-[#7e3a32] transition-colors hover:not-disabled:border-[#d09a8d] hover:not-disabled:bg-[#f8dfd9] disabled:cursor-not-allowed"
+          type="button"
+          aria-label={`Delete thread ${thread.title}`}
+          title="Delete thread"
+          disabled={isDeleting || hasPendingRename}
+          onClick={() => onDelete(thread.id)}
+        >
+          {isDeleting ? "…" : "×"}
+        </button>
+      </div>
     </div>
   );
 }
 
 export function ChatHeader() {
   return (
-    <header className="header">
-      <h1 className="title">Deep Stortinget Chat</h1>
-      <p className="subtitle">Convex Agents + OpenRouter</p>
+    <header className="rounded-xl border border-line bg-white/45 px-3.5 py-3">
+      <h1 className="m-0 font-display text-[clamp(1.05rem,2vw,1.3rem)]">Deep Stortinget Chat</h1>
+      <p className="mt-1 text-sm text-[#4d4a43]">Convex Agents + OpenRouter</p>
     </header>
   );
 }
@@ -131,7 +221,10 @@ export function MessagesPane({
   emptyState?: React.ReactNode;
 }) {
   return (
-    <section className="messages" aria-live="polite">
+    <section
+      className="flex min-h-0 flex-col gap-3 overflow-auto rounded-xl border border-line bg-gradient-to-b from-white/70 to-[#fdfaf4]/75 p-3.5"
+      aria-live="polite"
+    >
       {messages && messages.length > 0
         ? messages.map((message) => <MessageBubble key={message.id} message={message} />)
         : emptyState}
@@ -144,8 +237,14 @@ function MessageBubble({ message }: { message: MessageListItem }) {
   const isUser = message.role === "user";
   const speaker = isUser ? "You" : message.role === "assistant" ? "Assistant" : "System";
   return (
-    <article className={`message ${isUser ? "user" : "assistant"}`}>
-      <div className="role">{speaker}</div>
+    <article
+      className={`max-w-[min(78ch,92%)] animate-in rounded-xl border px-3.5 py-3 text-[0.98rem] leading-relaxed whitespace-pre-wrap duration-150 zoom-in-95 fade-in max-sm:max-w-full ${
+        isUser ? "ml-auto border-[#d7b98f] bg-[#efe2cf]" : "mr-auto border-[#b6d4ca] bg-[#eff6f3]"
+      }`}
+    >
+      <div className="mb-1 font-display text-[0.76rem] tracking-[0.04em] uppercase opacity-75">
+        {speaker}
+      </div>
       <div>{message.text}</div>
     </article>
   );
@@ -169,322 +268,29 @@ export function Composer({
   onPromptChange: (value: string) => void;
 }) {
   return (
-    <form className="composer" onSubmit={onSubmit}>
+    <form
+      className="grid grid-cols-[1fr_auto] gap-2.5 rounded-xl border border-line bg-paper/92 p-3 max-[640px]:grid-cols-1"
+      onSubmit={onSubmit}
+    >
       <input
-        className="input"
+        className="w-full rounded-xl border border-[#cdbf9f] bg-[#fffdf9] px-3 py-2.5 text-ink transition-shadow outline-none focus:border-accent focus:shadow-[0_0_0_2px_rgba(29,106,82,0.12)] disabled:cursor-not-allowed"
         placeholder={placeholder}
         value={prompt}
         onChange={(event) => onPromptChange(event.target.value)}
         disabled={isSending}
       />
-      <button className="send" type="submit" disabled={!canSend}>
+      <button
+        className="min-h-[42px] cursor-pointer rounded-xl bg-linear-to-br from-accent to-[#14503f] px-4 font-bold text-[#f4fff9] transition-opacity hover:not-disabled:opacity-95 disabled:cursor-not-allowed disabled:bg-[#9ab3ab] max-[640px]:w-full"
+        type="submit"
+        disabled={!canSend}
+      >
         {isSending ? "Thinking…" : "Send"}
       </button>
-      {error ? <div className="error">{error}</div> : null}
+      {error ? (
+        <div className="col-span-full rounded-xl border border-[#edbcbc] bg-[#fde4e4] px-3 py-2.5 text-sm text-[#8b2c2c]">
+          {error}
+        </div>
+      ) : null}
     </form>
   );
 }
-
-const CHAT_STYLES = `
-  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@600;700&display=swap");
-
-  :root {
-    --ink: #1a1a17;
-    --paper: #f8f5ee;
-    --sand: #ece4d2;
-    --accent: #1d6a52;
-    --line: #d2c7ae;
-    --line-strong: #baac8e;
-  }
-
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    color: var(--ink);
-    background:
-      radial-gradient(circle at 18% 20%, #efe7d5 0%, transparent 40%),
-      radial-gradient(circle at 80% 10%, #e8d9bc 0%, transparent 48%),
-      linear-gradient(160deg, #f8f5ee 0%, #f1eadb 100%);
-    font-family: "DM Sans", sans-serif;
-  }
-
-  .chat-shell {
-    max-width: 1120px;
-    margin: 0 auto;
-    min-height: 100dvh;
-    padding: 20px 16px;
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 14px;
-  }
-
-  .panel,
-  .chat-main {
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: rgba(248, 245, 238, 0.86);
-    backdrop-filter: blur(4px);
-    min-height: 0;
-  }
-
-  .panel {
-    display: grid;
-    grid-template-rows: auto auto 1fr;
-    padding: 12px;
-    gap: 10px;
-  }
-
-  .sidebar-title {
-    margin: 0;
-    font-family: "Syne", sans-serif;
-    font-size: 1.05rem;
-  }
-
-  .new-thread {
-    border: 1px solid #cdbf9f;
-    border-radius: 10px;
-    min-height: 40px;
-    background: #fffdf8;
-    color: var(--ink);
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .new-thread:disabled {
-    cursor: not-allowed;
-    background: #ece7dc;
-  }
-
-  .thread-list {
-    min-height: 0;
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-right: 2px;
-  }
-
-  .thread-item {
-    width: 100%;
-    text-align: left;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px 40px 10px 10px;
-    background: #fffdf8;
-    cursor: pointer;
-    color: var(--ink);
-  }
-
-  .thread-item-wrap {
-    position: relative;
-  }
-
-  .thread-delete {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    border: 1px solid #d8ccb4;
-    background: #fff9f0;
-    color: #7e3a32;
-    font-size: 1rem;
-    line-height: 1;
-    cursor: pointer;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s ease-out, background .15s ease-out;
-  }
-
-  .thread-item-wrap:hover .thread-delete,
-  .thread-item-wrap:focus-within .thread-delete {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .thread-delete:disabled {
-    cursor: not-allowed;
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .thread-delete:not(:disabled):hover {
-    background: #f8dfd9;
-    border-color: #d09a8d;
-  }
-
-  .thread-item.active {
-    border-color: var(--line-strong);
-    background: #efe7d8;
-  }
-
-  .thread-name {
-    font-weight: 700;
-    line-height: 1.25;
-  }
-
-  .thread-meta {
-    margin-top: 4px;
-    font-size: 0.84rem;
-    color: #5a554a;
-  }
-
-  .chat-main {
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .header {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.45);
-    padding: 12px 14px;
-  }
-
-  .title {
-    margin: 0;
-    font-family: "Syne", sans-serif;
-    font-size: clamp(1.05rem, 2vw, 1.3rem);
-  }
-
-  .subtitle {
-    margin: 4px 0 0;
-    font-size: 0.9rem;
-    color: #4d4a43;
-  }
-
-  .messages {
-    min-height: 0;
-    overflow: auto;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(253,250,244,0.75));
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .message {
-    max-width: min(78ch, 92%);
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    white-space: pre-wrap;
-    line-height: 1.45;
-    font-size: 0.98rem;
-    animation: reveal .15s ease-out;
-  }
-
-  .message.user {
-    margin-left: auto;
-    background: #efe2cf;
-    border-color: #d7b98f;
-  }
-
-  .message.assistant {
-    margin-right: auto;
-    background: #eff6f3;
-    border-color: #b6d4ca;
-  }
-
-  .role {
-    font-family: "Syne", sans-serif;
-    font-size: 0.76rem;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-    opacity: 0.75;
-  }
-
-  .composer {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    background: rgba(248, 245, 238, 0.92);
-  }
-
-  .input {
-    width: 100%;
-    border: 1px solid #cdbf9f;
-    border-radius: 10px;
-    background: #fffdf9;
-    padding: 11px 12px;
-    color: var(--ink);
-    outline: none;
-    font: inherit;
-  }
-
-  .input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(29, 106, 82, 0.12);
-  }
-
-  .send {
-    border: none;
-    border-radius: 10px;
-    padding: 0 16px;
-    min-height: 42px;
-    background: linear-gradient(160deg, var(--accent), #14503f);
-    color: #f4fff9;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .send:disabled {
-    cursor: not-allowed;
-    background: #9ab3ab;
-  }
-
-  .empty,
-  .error {
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 0.9rem;
-  }
-
-  .empty {
-    background: #f3efe6;
-    border: 1px dashed #d7cdb8;
-  }
-
-  .error {
-    color: #8b2c2c;
-    background: #fde4e4;
-    border: 1px solid #edbcbc;
-  }
-
-  @keyframes reveal {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @media (max-width: 900px) {
-    .chat-shell {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr;
-    }
-
-    .panel {
-      max-height: 38dvh;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .composer { grid-template-columns: 1fr; }
-    .send { width: 100%; }
-    .message { max-width: 100%; }
-    .thread-delete {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-`;

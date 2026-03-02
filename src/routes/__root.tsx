@@ -10,6 +10,8 @@ import {
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import { useCallback, useState } from "react";
 
+import "../styles.css";
+
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({

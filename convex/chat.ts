@@ -1,3 +1,5 @@
+import { vStreamArgs, vStreamMessagesReturnValue } from "@convex-dev/agent";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import { components } from "./_generated/api";
@@ -136,6 +138,29 @@ export const listMessages = query({
   },
 });
 
+export const listThreadMessages = query({
+  args: {
+    threadId: v.string(),
+    paginationOpts: paginationOptsValidator,
+    streamArgs: vStreamArgs,
+  },
+  returns: vStreamMessagesReturnValue,
+  handler: async (ctx, args) => {
+    const paginated = await chatAgent.listMessages(ctx, {
+      threadId: args.threadId,
+      paginationOpts: args.paginationOpts,
+      excludeToolMessages: true,
+      statuses: ["success", "failed", "pending"],
+    });
+    const streams = await chatAgent.syncStreams(ctx, {
+      threadId: args.threadId,
+      streamArgs: args.streamArgs,
+    });
+
+    return { ...paginated, streams };
+  },
+});
+
 export const sendMessage = action({
   args: {
     threadId: v.string(),
@@ -152,8 +177,32 @@ export const sendMessage = action({
       threadId: args.threadId,
     });
 
-    await thread.generateText({
-      messages: [{ role: "user", content: prompt }],
+    await thread.streamText(
+      {
+        messages: [{ role: "user", content: prompt }],
+      },
+      { saveStreamDeltas: true },
+    );
+
+    return null;
+  },
+});
+
+export const renameThread = mutation({
+  args: {
+    threadId: v.string(),
+    title: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const title = args.title.trim();
+    if (!title) {
+      throw new Error("Thread title cannot be empty.");
+    }
+
+    await ctx.runMutation(components.agent.threads.updateThread, {
+      threadId: args.threadId,
+      patch: { title },
     });
 
     return null;
