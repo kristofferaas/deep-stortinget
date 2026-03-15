@@ -11,6 +11,7 @@ import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import { useCallback, useState } from "react";
 
 import "../styles.css";
+import { TooltipProvider } from "~/components/ui/tooltip";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -53,9 +54,11 @@ function RootComponent() {
     <RootDocument>
       <AuthKitProvider initialAuth={auth}>
         <ConvexProviderWithAuth client={convex} useAuth={useAuthFromAuthKit}>
-          <main>
-            <Outlet />
-          </main>
+          <TooltipProvider>
+            <main>
+              <Outlet />
+            </main>
+          </TooltipProvider>
           <TanStackRouterDevtools position="bottom-right" />
         </ConvexProviderWithAuth>
       </AuthKitProvider>
