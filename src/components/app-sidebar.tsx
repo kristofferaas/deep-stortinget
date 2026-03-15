@@ -5,15 +5,12 @@ import {
   IconSettings,
   IconLifebuoy,
   IconSend,
-  IconFrame,
-  IconChartPie,
-  IconMap,
   IconCommand,
 } from "@tabler/icons-react";
 import * as React from "react";
 
+import { AppNavThreads } from "~/features/threads/app-nav-threads";
 import { NavMain } from "~/components/nav-main";
-import { NavProjects } from "~/components/nav-projects";
 import { NavSecondary } from "~/components/nav-secondary";
 import { NavUser } from "~/components/nav-user";
 import {
@@ -131,23 +128,6 @@ const data = {
       icon: <IconSend />,
     },
   ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: <IconFrame />,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: <IconChartPie />,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: <IconMap />,
-    },
-  ],
 };
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -169,7 +149,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <AppNavThreads />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
