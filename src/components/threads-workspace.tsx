@@ -1,24 +1,33 @@
 import {
   IconArrowUp,
+  IconDots,
   IconMessageCirclePlus,
   IconMessages,
-  IconRobot,
-  IconSparkles,
-  IconUser,
+  IconPencil,
+  IconTrash,
 } from "@tabler/icons-react";
-import { FormEvent, RefObject, useMemo } from "react";
+import { FormEvent, RefObject, useEffect, useMemo, useState } from "react";
 
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader } from "~/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyContent,
@@ -27,14 +36,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field";
+import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -113,30 +115,18 @@ function getMessageMeta(role: MessageListItem["role"]) {
   switch (role) {
     case "user":
       return {
-        badgeVariant: "secondary" as const,
-        description: "Prompt",
-        icon: IconUser,
         label: "You",
       };
     case "assistant":
       return {
-        badgeVariant: "default" as const,
-        description: "Response",
-        icon: IconRobot,
         label: "Deep Stortinget",
       };
     case "tool":
       return {
-        badgeVariant: "outline" as const,
-        description: "Context",
-        icon: IconSparkles,
         label: "Tool",
       };
     case "system":
       return {
-        badgeVariant: "outline" as const,
-        description: "Instruction",
-        icon: IconSparkles,
         label: "System",
       };
   }
@@ -153,9 +143,13 @@ export function ThreadsWorkspace({
   isMessagesLoading,
   isCreatingThread,
   isSending,
+  deletingThreadId,
+  renamingThreadId,
   bottomRef,
   onCreateThread,
+  onDeleteThread,
   onPromptChange,
+  onRenameThread,
   onSubmit,
 }: ThreadsWorkspaceProps) {
   const activeThread = useMemo(
@@ -163,28 +157,148 @@ export function ThreadsWorkspace({
     [activeThreadId, threads],
   );
   const canSend = Boolean(prompt.trim().length > 0 && !isSending);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isRenamingActiveThread = activeThreadId !== null && renamingThreadId === activeThreadId;
+  const isDeletingActiveThread = activeThreadId !== null && deletingThreadId === activeThreadId;
+
+  useEffect(() => {
+    setRenameDraft(activeThread?.title ?? "");
+  }, [activeThread?.title]);
+
+  function startEditingTitle() {
+    if (!activeThread || isRenamingActiveThread) {
+      return;
+    }
+
+    setRenameDraft(activeThread.title);
+    setIsEditingTitle(true);
+  }
+
+  function cancelEditingTitle() {
+    setRenameDraft(activeThread?.title ?? "");
+    setIsEditingTitle(false);
+  }
+
+  async function submitRename() {
+    if (!activeThread) {
+      return;
+    }
+
+    const nextTitle = renameDraft.trim();
+    if (!nextTitle || nextTitle === activeThread.title) {
+      cancelEditingTitle();
+      return;
+    }
+
+    try {
+      await onRenameThread(activeThread.id, nextTitle);
+      setIsEditingTitle(false);
+    } catch {
+      // Route-level handler owns the error message.
+    }
+  }
+
+  async function confirmDelete() {
+    if (!activeThread) {
+      return;
+    }
+
+    await onDeleteThread(activeThread.id);
+    setIsDeleteDialogOpen(false);
+  }
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2">
-        <div className="flex items-center gap-2 px-4">
+      <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 rounded-t-[inherit] bg-background px-0">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <Breadcrumb>
-            <BreadcrumbList>
+            <BreadcrumbList className="min-w-0">
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink href="/threads">Threads</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{activeThread?.title}</BreadcrumbPage>
+              <BreadcrumbItem className="min-w-0">
+                {isEditingTitle && activeThread ? (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void submitRename();
+                    }}
+                  >
+                    <Input
+                      autoFocus
+                      value={renameDraft}
+                      disabled={isRenamingActiveThread}
+                      className="h-8 w-[min(24rem,60vw)]"
+                      onBlur={() => void submitRename()}
+                      onChange={(event) => setRenameDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          cancelEditingTitle();
+                        }
+                      }}
+                    />
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!activeThread || isRenamingActiveThread}
+                    className="min-w-0 truncate text-left font-normal text-foreground outline-hidden transition-opacity hover:opacity-70 disabled:opacity-100"
+                    onClick={startEditingTitle}
+                  >
+                    <BreadcrumbPage className="truncate">
+                      {activeThread?.title ?? "New Thread"}
+                    </BreadcrumbPage>
+                  </button>
+                )}
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          {activeThread ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-2 rounded-full"
+                    disabled={isRenamingActiveThread || isDeletingActiveThread}
+                  />
+                }
+              >
+                <IconDots />
+                <span className="sr-only">Manage thread</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-40" align="end" side="bottom">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    disabled={isRenamingActiveThread || isDeletingActiveThread}
+                    onClick={startEditingTitle}
+                  >
+                    <IconPencil />
+                    Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={isRenamingActiveThread || isDeletingActiveThread}
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                  >
+                    <IconTrash />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </header>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="flex min-h-[420px] flex-col gap-3 px-4 py-4">
+        <div className="flex min-h-[420px] flex-col gap-3 px-4 py-4 pb-28">
           {isMessagesLoading
             ? Array.from({ length: 4 }).map((_, index) => (
                 <Card key={index} size="sm" className="max-w-3xl bg-background/70">
@@ -218,51 +332,63 @@ export function ThreadsWorkspace({
         </div>
       </ScrollArea>
 
-      <form onSubmit={onSubmit}>
-        <Card className="bg-background/80 shadow-sm backdrop-blur-sm">
-          <CardContent>
-            <FieldGroup>
-              <Field data-invalid={error ? true : undefined}>
-                <FieldLabel htmlFor="thread-prompt">Message</FieldLabel>
-                <FieldContent>
-                  <Textarea
-                    id="thread-prompt"
-                    rows={4}
-                    placeholder={composerPlaceholder}
-                    value={prompt}
-                    aria-invalid={error ? true : undefined}
-                    disabled={isSending}
-                    onChange={(event) => onPromptChange(event.target.value)}
-                    onKeyDown={(event) => {
-                      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                        event.preventDefault();
-                        event.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                  />
-                  <FieldDescription>
-                    {mode === "landing"
-                      ? "The first send creates a new thread automatically."
-                      : "The prompt will be sent to the currently selected thread."}
-                  </FieldDescription>
-                  <FieldError>{error}</FieldError>
-                </FieldContent>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-          <CardFooter className="justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline">Cmd/Ctrl + Enter</Badge>
-              <Separator orientation="vertical" className="h-4" />
-              <span>Send from the keyboard</span>
-            </div>
-            <Button type="submit" disabled={!canSend}>
+      <form onSubmit={onSubmit} className="sticky bottom-0 z-10 px-4 py-4">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+          <div className="relative">
+            <Textarea
+              id="thread-prompt"
+              rows={3}
+              placeholder={composerPlaceholder}
+              value={prompt}
+              aria-invalid={error ? true : undefined}
+              disabled={isSending}
+              className="min-h-24 resize-none rounded-3xl border bg-background px-4 py-3 pr-16 pb-14 shadow-sm focus-visible:ring-0"
+              onChange={(event) => onPromptChange(event.target.value)}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!canSend}
+              className="absolute right-3 bottom-3 rounded-full"
+            >
               <IconArrowUp data-icon="inline-start" />
-              {isSending ? "Thinking…" : "Send"}
             </Button>
-          </CardFooter>
-        </Card>
+          </div>
+          {error ? <p className="px-1 text-sm text-destructive">{error}</p> : null}
+        </div>
       </form>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <IconTrash />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete thread</AlertDialogTitle>
+            <AlertDialogDescription>
+              {activeThread
+                ? `This removes "${activeThread.title}" and its message history.`
+                : "This removes the selected thread and its message history."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingActiveThread}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeletingActiveThread}
+              onClick={() => void confirmDelete()}
+            >
+              {isDeletingActiveThread ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -270,34 +396,33 @@ export function ThreadsWorkspace({
 function MessageCard({ message }: { message: MessageListItem }) {
   const isUser = message.role === "user";
   const meta = getMessageMeta(message.role);
-  const Icon = meta.icon;
+  const bubbleClassName = isUser
+    ? "ml-auto bg-primary text-primary-foreground"
+    : message.role === "assistant"
+      ? "mr-auto bg-secondary text-secondary-foreground"
+      : "mr-auto bg-muted text-foreground";
 
   return (
-    <Card
-      size="sm"
-      className={cn(
-        "max-w-[min(74ch,100%)] shadow-sm",
-        isUser ? "ml-auto bg-secondary/80 ring-secondary/70" : "mr-auto bg-background/90",
-      )}
+    <div
+      className={cn("flex max-w-[min(74ch,100%)] flex-col gap-1", isUser ? "ml-auto" : "mr-auto")}
     >
-      <CardHeader>
-        <div className="flex min-w-0 items-center gap-3">
-          <Avatar size="sm">
-            <AvatarFallback>
-              <Icon />
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <CardTitle className="text-sm">{meta.label}</CardTitle>
-            <CardDescription>{meta.description}</CardDescription>
-          </div>
-          <Badge variant={meta.badgeVariant}>{message.role}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</div>
-      </CardContent>
-    </Card>
+      <span
+        className={cn(
+          "px-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase",
+          isUser && "text-right",
+        )}
+      >
+        {meta.label}
+      </span>
+      <div
+        className={cn(
+          "rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap shadow-sm",
+          bubbleClassName,
+        )}
+      >
+        {message.text}
+      </div>
+    </div>
   );
 }
 
@@ -318,14 +443,12 @@ function ConversationEmptyState({
             <IconMessageCirclePlus />
           </EmptyMedia>
           <EmptyTitle>Start with a question</EmptyTitle>
-          <EmptyDescription>
-            Type below to create a new thread instantly, or open an empty thread first.
-          </EmptyDescription>
+          <EmptyDescription>Type below to create a new thread instantly.</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button onClick={onCreateThread} disabled={isCreatingThread}>
             <IconMessageCirclePlus data-icon="inline-start" />
-            {isCreatingThread ? "Creating…" : "Create Empty Thread"}
+            {isCreatingThread ? "Creating…" : "Start Thread"}
           </Button>
         </EmptyContent>
       </Empty>
