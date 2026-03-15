@@ -1,16 +1,10 @@
 import { convexQuery, useConvexAction, useConvexMutation } from "@convex-dev/react-query";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { api } from "../../../convex/_generated/api";
-import {
-  ChatHeader,
-  Composer,
-  MessagesPane,
-  ThreadsSidebar,
-  threadTitleFallback,
-} from "../../components/thread-chat-layout";
+import { ThreadsWorkspace, threadTitleFallback } from "../../components/threads-workspace";
 
 export const Route = createFileRoute("/_authenticated/threads/")({
   component: ThreadsIndexPage,
@@ -27,7 +21,7 @@ function ThreadsIndexPage() {
   const deleteThreadMutation = useMutation({ mutationFn: deleteThreadFn });
   const renameThreadMutation = useMutation({ mutationFn: renameThreadFn });
   const sendMessageMutation = useMutation({ mutationFn: sendMessageFn });
-  const { data: threads } = useQuery({
+  const { data: threads, isPending: isThreadsPending } = useQuery({
     ...convexQuery(api.chat.listThreads),
     placeholderData: [],
   });
@@ -36,11 +30,6 @@ function ThreadsIndexPage() {
   const [error, setError] = useState<string | null>(null);
 
   const isStartingThread = createThreadMutation.isPending;
-
-  const canSend = useMemo(
-    () => Boolean(prompt.trim().length > 0 && !isStartingThread),
-    [isStartingThread, prompt],
-  );
 
   async function onCreateThread() {
     if (createThreadMutation.isPending) {
@@ -108,44 +97,34 @@ function ThreadsIndexPage() {
   }
 
   return (
-    <main className="mx-auto grid min-h-dvh w-full max-w-[1120px] grid-cols-1 gap-3.5 px-4 py-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <ThreadsSidebar
-        threads={threads ?? []}
-        activeThreadId={null}
-        isCreatingThread={createThreadMutation.isPending}
-        deletingThreadId={
-          deleteThreadMutation.isPending ? (deleteThreadMutation.variables?.threadId ?? null) : null
-        }
-        renamingThreadId={
-          renameThreadMutation.isPending ? (renameThreadMutation.variables?.threadId ?? null) : null
-        }
-        onCreateThread={onCreateThread}
-        onSelectThread={(threadId) =>
-          void navigate({ to: "/threads/$threadId", params: { threadId } })
-        }
-        onDeleteThread={onDeleteThread}
-        onRenameThread={onRenameThread}
-      />
-      <section className="grid min-h-0 grid-rows-[auto_1fr_auto] gap-3 rounded-2xl border border-line/90 bg-paper/85 p-3 backdrop-blur-sm">
-        <ChatHeader />
-        <MessagesPane
-          messages={undefined}
-          emptyState={
-            <div className="mr-auto max-w-[min(78ch,92%)] rounded-xl border border-[#b6d4ca] bg-[#eff6f3] px-3.5 py-3 text-[0.98rem] leading-relaxed max-sm:max-w-full">
-              Ask your first question to create a new chat thread.
-            </div>
-          }
-        />
-        <Composer
-          prompt={prompt}
-          isSending={isStartingThread}
-          canSend={canSend}
-          error={error}
-          placeholder="Ask something to start a new chat…"
-          onSubmit={onSubmit}
-          onPromptChange={setPrompt}
-        />
-      </section>
-    </main>
+    <ThreadsWorkspace
+      mode="landing"
+      headerTitle="Deep Stortinget Chat"
+      headerDescription="A fresh shadcn workspace for starting and managing parliamentary chat threads."
+      composerPlaceholder="Ask something to start a new chat…"
+      threads={threads ?? []}
+      activeThreadId={null}
+      messages={[]}
+      prompt={prompt}
+      error={error}
+      isThreadsLoading={isThreadsPending}
+      isMessagesLoading={false}
+      isCreatingThread={createThreadMutation.isPending}
+      isSending={isStartingThread}
+      deletingThreadId={
+        deleteThreadMutation.isPending ? (deleteThreadMutation.variables?.threadId ?? null) : null
+      }
+      renamingThreadId={
+        renameThreadMutation.isPending ? (renameThreadMutation.variables?.threadId ?? null) : null
+      }
+      onCreateThread={onCreateThread}
+      onSelectThread={(threadId) =>
+        void navigate({ to: "/threads/$threadId", params: { threadId } })
+      }
+      onDeleteThread={onDeleteThread}
+      onRenameThread={onRenameThread}
+      onPromptChange={setPrompt}
+      onSubmit={onSubmit}
+    />
   );
 }

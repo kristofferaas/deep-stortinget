@@ -55,9 +55,7 @@ function RootComponent() {
       <AuthKitProvider initialAuth={auth}>
         <ConvexProviderWithAuth client={convex} useAuth={useAuthFromAuthKit}>
           <TooltipProvider>
-            <main>
-              <Outlet />
-            </main>
+            <Outlet />
           </TooltipProvider>
           <TanStackRouterDevtools position="bottom-right" />
         </ConvexProviderWithAuth>

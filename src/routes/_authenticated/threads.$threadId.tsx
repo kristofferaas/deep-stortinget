@@ -2,16 +2,14 @@ import { useThreadMessages } from "@convex-dev/agent/react";
 import { convexQuery, useConvexAction, useConvexMutation } from "@convex-dev/react-query";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { api } from "../../../convex/_generated/api";
 import {
-  ChatHeader,
-  Composer,
-  MessagesPane,
-  ThreadsSidebar,
+  normalizeMessageRole,
+  ThreadsWorkspace,
   threadTitleFallback,
-} from "../../components/thread-chat-layout";
+} from "../../components/threads-workspace";
 
 export const Route = createFileRoute("/_authenticated/threads/$threadId")({
   component: ThreadPage,
@@ -61,7 +59,7 @@ function ThreadPage() {
   const deleteThreadMutation = useMutation({ mutationFn: deleteThreadFn });
   const renameThreadMutation = useMutation({ mutationFn: renameThreadFn });
   const sendMessageMutation = useMutation({ mutationFn: sendMessageFn });
-  const { data: threads } = useQuery({
+  const { data: threads, isPending: isThreadsPending } = useQuery({
     ...convexQuery(api.chat.listThreads),
     placeholderData: [],
   });
@@ -102,21 +100,13 @@ function ThreadPage() {
     { initialNumItems: 200, stream: true },
   );
 
-  const displayedMessages = useMemo(
-    () =>
-      messages
-        .map((message) => {
-          const text = extractMessageText(message);
-          const role = message.message?.role ?? "assistant";
-          return {
-            id: message._id,
-            role,
-            text,
-          };
-        })
-        .filter((message) => message.text.length > 0),
-    [messages],
-  );
+  const displayedMessages = messages
+    .map((message) => ({
+      id: message._id,
+      role: normalizeMessageRole(message.message?.role),
+      text: extractMessageText(message),
+    }))
+    .filter((message) => message.text.length > 0);
 
   const isSending = sendMessageMutation.isPending;
   const isCreatingThread = createThreadMutation.isPending;
@@ -124,11 +114,6 @@ function ThreadPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [displayedMessages, threadId]);
-
-  const canSend = useMemo(
-    () => Boolean(prompt.trim().length > 0 && !isSending),
-    [isSending, prompt],
-  );
 
   async function onCreateThread() {
     if (isCreatingThread) {
@@ -194,37 +179,35 @@ function ThreadPage() {
   }
 
   return (
-    <main className="mx-auto grid min-h-dvh w-full max-w-[1120px] grid-cols-1 gap-3.5 px-4 py-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <ThreadsSidebar
-        threads={safeThreads}
-        activeThreadId={threadId}
-        isCreatingThread={isCreatingThread}
-        deletingThreadId={
-          deleteThreadMutation.isPending ? (deleteThreadMutation.variables?.threadId ?? null) : null
-        }
-        renamingThreadId={
-          renameThreadMutation.isPending ? (renameThreadMutation.variables?.threadId ?? null) : null
-        }
-        onCreateThread={onCreateThread}
-        onSelectThread={(nextThreadId) =>
-          void navigate({ to: "/threads/$threadId", params: { threadId: nextThreadId } })
-        }
-        onDeleteThread={onDeleteThread}
-        onRenameThread={onRenameThread}
-      />
-      <section className="grid min-h-0 grid-rows-[auto_1fr_auto] gap-3 rounded-2xl border border-line/90 bg-paper/85 p-3 backdrop-blur-sm">
-        <ChatHeader />
-        <MessagesPane messages={displayedMessages} bottomRef={bottomRef} />
-        <Composer
-          prompt={prompt}
-          isSending={isSending}
-          canSend={canSend}
-          error={error}
-          placeholder="Ask something…"
-          onSubmit={onSubmit}
-          onPromptChange={setPrompt}
-        />
-      </section>
-    </main>
+    <ThreadsWorkspace
+      mode="thread"
+      headerTitle={threadRecord?.title ?? "Deep Stortinget Chat"}
+      headerDescription="A fully rebuilt shadcn conversation workspace streaming from the active Convex thread."
+      composerPlaceholder="Ask something…"
+      threads={safeThreads}
+      activeThreadId={threadId}
+      messages={displayedMessages}
+      prompt={prompt}
+      error={error}
+      isThreadsLoading={isThreadsPending}
+      isMessagesLoading={isThreadRecordPending && displayedMessages.length === 0}
+      isCreatingThread={isCreatingThread}
+      isSending={isSending}
+      deletingThreadId={
+        deleteThreadMutation.isPending ? (deleteThreadMutation.variables?.threadId ?? null) : null
+      }
+      renamingThreadId={
+        renameThreadMutation.isPending ? (renameThreadMutation.variables?.threadId ?? null) : null
+      }
+      bottomRef={bottomRef}
+      onCreateThread={onCreateThread}
+      onSelectThread={(nextThreadId) =>
+        void navigate({ to: "/threads/$threadId", params: { threadId: nextThreadId } })
+      }
+      onDeleteThread={onDeleteThread}
+      onRenameThread={onRenameThread}
+      onPromptChange={setPrompt}
+      onSubmit={onSubmit}
+    />
   );
 }

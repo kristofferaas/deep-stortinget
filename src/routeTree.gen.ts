@@ -13,6 +13,7 @@ import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedThreadsIndexRouteImport } from './routes/_authenticated/threads.index'
+import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
 import { Route as AuthenticatedThreadsThreadIdRouteImport } from './routes/_authenticated/threads.$threadId'
 
@@ -36,6 +37,12 @@ const AuthenticatedThreadsIndexRoute =
     path: '/threads/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedDashboardIndexRoute =
+  AuthenticatedDashboardIndexRouteImport.update({
+    id: '/dashboard/',
+    path: '/dashboard/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
   id: '/api/auth/callback',
   path: '/api/auth/callback',
@@ -53,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/threads/$threadId': typeof AuthenticatedThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/threads/': typeof AuthenticatedThreadsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -60,6 +68,7 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/threads/$threadId': typeof AuthenticatedThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/threads': typeof AuthenticatedThreadsIndexRoute
 }
 export interface FileRoutesById {
@@ -69,6 +78,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/_authenticated/threads/$threadId': typeof AuthenticatedThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/threads/': typeof AuthenticatedThreadsIndexRoute
 }
 export interface FileRouteTypes {
@@ -78,9 +88,16 @@ export interface FileRouteTypes {
     | '/logout'
     | '/threads/$threadId'
     | '/api/auth/callback'
+    | '/dashboard/'
     | '/threads/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/logout' | '/threads/$threadId' | '/api/auth/callback' | '/threads'
+  to:
+    | '/'
+    | '/logout'
+    | '/threads/$threadId'
+    | '/api/auth/callback'
+    | '/dashboard'
+    | '/threads'
   id:
     | '__root__'
     | '/'
@@ -88,6 +105,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/_authenticated/threads/$threadId'
     | '/api/auth/callback'
+    | '/_authenticated/dashboard/'
     | '/_authenticated/threads/'
   fileRoutesById: FileRoutesById
 }
@@ -128,6 +146,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedThreadsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/dashboard/': {
+      id: '/_authenticated/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/auth/callback': {
       id: '/api/auth/callback'
       path: '/api/auth/callback'
@@ -147,11 +172,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedThreadsThreadIdRoute: typeof AuthenticatedThreadsThreadIdRoute
+  AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedThreadsIndexRoute: typeof AuthenticatedThreadsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedThreadsThreadIdRoute: AuthenticatedThreadsThreadIdRoute,
+  AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedThreadsIndexRoute: AuthenticatedThreadsIndexRoute,
 }
 
