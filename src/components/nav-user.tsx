@@ -1,3 +1,5 @@
+import type { User } from "@workos/authkit-tanstack-react-start";
+
 import {
   IconSelector,
   IconSparkles,
@@ -6,6 +8,8 @@ import {
   IconBell,
   IconLogout,
 } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { useAuth } from "@workos/authkit-tanstack-react-start/client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import {
@@ -24,16 +28,38 @@ import {
   useSidebar,
 } from "~/components/ui/sidebar";
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-}) {
+function isNonEmptyString(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function getUserDisplayName(user: User) {
+  const fullName = [user.firstName, user.lastName].filter(isNonEmptyString).join(" ").trim();
+  return fullName || user.email;
+}
+
+function getUserInitials(user: User) {
+  const nameParts = [user.firstName, user.lastName].filter(isNonEmptyString);
+  if (nameParts.length > 0) {
+    return nameParts
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 2);
+  }
+
+  return user.email.slice(0, 2).toUpperCase();
+}
+
+export function NavUser() {
   const { isMobile } = useSidebar();
+  const { user } = useAuth();
+
+  if (!user) {
+    return null;
+  }
+
+  const displayName = getUserDisplayName(user);
+  const initials = getUserInitials(user);
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -42,11 +68,11 @@ export function NavUser({
             render={<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />}
           >
             <Avatar>
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>CN</AvatarFallback>
+              <AvatarImage src={user.profilePictureUrl ?? undefined} alt={displayName} />
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.name}</span>
+              <span className="truncate font-medium">{displayName}</span>
               <span className="truncate text-xs">{user.email}</span>
             </div>
             <IconSelector className="ml-auto size-4" />
@@ -61,11 +87,11 @@ export function NavUser({
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                   <Avatar>
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>CN</AvatarFallback>
+                    <AvatarImage src={user.profilePictureUrl ?? undefined} alt={displayName} />
+                    <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
+                    <span className="truncate font-medium">{displayName}</span>
                     <span className="truncate text-xs">{user.email}</span>
                   </div>
                 </div>
@@ -94,7 +120,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem render={<Link to="/logout" reloadDocument />}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

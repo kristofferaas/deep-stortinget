@@ -1,6 +1,6 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { useConvexMutation } from "@convex-dev/react-query";
-import { IconDots, IconMessageCircle, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconDots, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { FormEvent, useEffect, useState } from "react";
