@@ -1,5 +1,8 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { getAuth, getSignInUrl } from "@workos/authkit-tanstack-react-start";
+
+import { AppSidebar } from "~/components/app-sidebar";
+import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
   loader: async ({ location }) => {
@@ -11,4 +14,16 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ href });
     }
   },
+  component: AuthenticatedAppLayout,
 });
+
+function AuthenticatedAppLayout() {
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <Outlet />
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
