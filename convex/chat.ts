@@ -2,8 +2,8 @@ import { vStreamArgs, vStreamMessagesReturnValue } from "@convex-dev/agent";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
-import { components } from "./_generated/api";
-import { action, mutation, query } from "./_generated/server";
+import { components, internal } from "./_generated/api";
+import { action, internalAction, mutation, query, type ActionCtx } from "./_generated/server";
 import { chatAgent } from "./agent";
 
 function extractText(message: unknown): string {
@@ -38,16 +38,44 @@ function extractText(message: unknown): string {
   return "";
 }
 
-export const createThread = mutation({
-  args: { title: v.optional(v.string()) },
-  returns: v.string(),
-  handler: async (ctx, args) => {
-    const { threadId } = await chatAgent.createThread(ctx, {
-      title: args.title?.trim() || "New chat",
-    });
-    return threadId;
+function buildThreadTitle(prompt: string): string {
+  const normalized = prompt.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "New chat";
+  }
+
+  if (normalized.length <= 80) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 77).trimEnd()}...`;
+}
+
+async function streamPromptToThread(
+  ctx: ActionCtx,
+  args: {
+    prompt: string;
+    threadId: string;
   },
-});
+) {
+  const prompt = args.prompt.trim();
+  if (!prompt) {
+    return null;
+  }
+
+  const { thread } = await chatAgent.continueThread(ctx, {
+    threadId: args.threadId,
+  });
+
+  await thread.streamText(
+    {
+      messages: [{ role: "user", content: prompt }],
+    },
+    { saveStreamDeltas: true },
+  );
+
+  return null;
+}
 
 export const listThreads = query({
   args: {},
@@ -168,23 +196,47 @@ export const sendMessage = action({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    return await streamPromptToThread(ctx, args);
+  },
+});
+
+export const createThread = action({
+  args: {
+    prompt: v.string(),
+  },
+  handler: async (ctx, args) => {
     const prompt = args.prompt.trim();
     if (!prompt) {
-      return null;
+      throw new Error("Message cannot be empty.");
     }
 
-    const { thread } = await chatAgent.continueThread(ctx, {
-      threadId: args.threadId,
+    const { threadId } = await chatAgent.createThread(ctx, {
+      title: buildThreadTitle(prompt),
     });
 
-    await thread.streamText(
-      {
-        messages: [{ role: "user", content: prompt }],
-      },
-      { saveStreamDeltas: true },
-    );
+    void ctx.runAction(internal.chat.startAgent, {
+      threadId,
+      prompt: args.prompt,
+    });
 
-    return null;
+    await ctx.scheduler.runAfter(0, internal.chat.startAgent, { threadId, prompt: args.prompt });
+
+    return { threadId };
+  },
+});
+
+export const startAgent = internalAction({
+  args: {
+    threadId: v.string(),
+    prompt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const prompt = args.prompt.trim();
+    if (!prompt) {
+      throw new Error("Message cannot be empty.");
+    }
+
+    await chatAgent.generateText(ctx, { threadId: args.threadId }, { prompt: args.prompt });
   },
 });
 

@@ -1,11 +1,10 @@
 import { convexQuery } from "@convex-dev/react-query";
-import { IconDots, IconMessageCircle, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useConvexMutation } from "@convex-dev/react-query";
+import { IconDots, IconMessageCircle, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { FormEvent, useEffect, useState } from "react";
 
-import { api } from "../../../convex/_generated/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,24 +52,15 @@ import {
   useSidebar,
 } from "~/components/ui/sidebar";
 
-const RECENT_THREADS_LIMIT = 5;
+import { api } from "../../../convex/_generated/api";
 
-function threadTitleFallback(): string {
-  return `Chat ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date())}`;
-}
+const RECENT_THREADS_LIMIT = 5;
 
 export function AppNavThreads() {
   const navigate = useNavigate();
   const { isMobile } = useSidebar();
-  const createThreadFn = useConvexMutation(api.chat.createThread);
   const renameThreadFn = useConvexMutation(api.chat.renameThread);
   const deleteThreadFn = useConvexMutation(api.chat.deleteThread);
-  const createThreadMutation = useMutation({ mutationFn: createThreadFn });
   const renameThreadMutation = useMutation({ mutationFn: renameThreadFn });
   const deleteThreadMutation = useMutation({ mutationFn: deleteThreadFn });
   const { data: threads = [], isPending } = useQuery({
@@ -95,14 +85,7 @@ export function AppNavThreads() {
   }, [renameThread]);
 
   async function handleCreateThread() {
-    if (createThreadMutation.isPending) {
-      return;
-    }
-
-    const threadId = await createThreadMutation.mutateAsync({
-      title: threadTitleFallback(),
-    });
-    await navigate({ to: "/threads/$threadId", params: { threadId } });
+    await navigate({ to: "/threads" });
   }
 
   async function handleRenameSubmit(event: FormEvent<HTMLFormElement>) {
@@ -140,11 +123,7 @@ export function AppNavThreads() {
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
         <SidebarGroupLabel>Threads</SidebarGroupLabel>
-        <SidebarGroupAction
-          aria-label="Create thread"
-          disabled={createThreadMutation.isPending}
-          onClick={() => void handleCreateThread()}
-        >
+        <SidebarGroupAction aria-label="Create thread" onClick={() => void handleCreateThread()}>
           <IconPlus />
         </SidebarGroupAction>
         <SidebarMenu>
@@ -168,7 +147,6 @@ export function AppNavThreads() {
                       isActive={activeThreadId === thread.id}
                       tooltip={thread.title}
                     >
-                      <IconMessageCircle />
                       <span>{thread.title}</span>
                     </SidebarMenuButton>
                     <DropdownMenu>
@@ -212,7 +190,6 @@ export function AppNavThreads() {
           {!isPending && recentThreads.length === 0 ? (
             <SidebarMenuItem>
               <SidebarMenuButton render={<Link to="/threads" />}>
-                <IconMessageCircle />
                 <span>No threads yet</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -229,11 +206,16 @@ export function AppNavThreads() {
         </SidebarMenu>
       </SidebarGroup>
 
-      <Dialog open={Boolean(renameThread)} onOpenChange={(open) => !open && setRenameThreadId(null)}>
+      <Dialog
+        open={Boolean(renameThread)}
+        onOpenChange={(open) => !open && setRenameThreadId(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename thread</DialogTitle>
-            <DialogDescription>Give the conversation a clearer title in the sidebar.</DialogDescription>
+            <DialogDescription>
+              Give the conversation a clearer title in the sidebar.
+            </DialogDescription>
           </DialogHeader>
           <form className="flex flex-col gap-4" onSubmit={handleRenameSubmit}>
             <FieldGroup>
@@ -266,7 +248,10 @@ export function AppNavThreads() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={Boolean(deleteThread)} onOpenChange={(open) => !open && setDeleteThreadId(null)}>
+      <AlertDialog
+        open={Boolean(deleteThread)}
+        onOpenChange={(open) => !open && setDeleteThreadId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>

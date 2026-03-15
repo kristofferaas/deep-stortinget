@@ -9,7 +9,6 @@ import {
 } from "@tabler/icons-react";
 import * as React from "react";
 
-import { AppNavThreads } from "~/features/threads/app-nav-threads";
 import { NavMain } from "~/components/nav-main";
 import { NavSecondary } from "~/components/nav-secondary";
 import { NavUser } from "~/components/nav-user";
@@ -22,6 +21,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "~/components/ui/sidebar";
+import { AppNavThreads } from "~/features/threads/app-nav-threads";
 
 const data = {
   user: {

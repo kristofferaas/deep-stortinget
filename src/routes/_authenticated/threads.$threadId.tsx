@@ -5,11 +5,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { api } from "../../../convex/_generated/api";
-import {
-  normalizeMessageRole,
-  ThreadsWorkspace,
-  threadTitleFallback,
-} from "../../components/threads-workspace";
+import { normalizeMessageRole, ThreadsWorkspace } from "../../components/threads-workspace";
 
 export const Route = createFileRoute("/_authenticated/threads/$threadId")({
   component: ThreadPage,
@@ -51,11 +47,9 @@ function ThreadPage() {
   const navigate = useNavigate();
   const { threadId } = Route.useParams();
 
-  const createThreadFn = useConvexMutation(api.chat.createThread);
   const deleteThreadFn = useConvexMutation(api.chat.deleteThread);
   const renameThreadFn = useConvexMutation(api.chat.renameThread);
   const sendMessageFn = useConvexAction(api.chat.sendMessage);
-  const createThreadMutation = useMutation({ mutationFn: createThreadFn });
   const deleteThreadMutation = useMutation({ mutationFn: deleteThreadFn });
   const renameThreadMutation = useMutation({ mutationFn: renameThreadFn });
   const sendMessageMutation = useMutation({ mutationFn: sendMessageFn });
@@ -109,26 +103,10 @@ function ThreadPage() {
     .filter((message) => message.text.length > 0);
 
   const isSending = sendMessageMutation.isPending;
-  const isCreatingThread = createThreadMutation.isPending;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [displayedMessages, threadId]);
-
-  async function onCreateThread() {
-    if (isCreatingThread) {
-      return;
-    }
-
-    setError(null);
-    try {
-      const newThreadId = await createThreadMutation.mutateAsync({ title: threadTitleFallback() });
-      setPrompt("");
-      await navigate({ to: "/threads/$threadId", params: { threadId: newThreadId } });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create thread.");
-    }
-  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -191,7 +169,7 @@ function ThreadPage() {
       error={error}
       isThreadsLoading={isThreadsPending}
       isMessagesLoading={isThreadRecordPending && displayedMessages.length === 0}
-      isCreatingThread={isCreatingThread}
+      isCreatingThread={false}
       isSending={isSending}
       deletingThreadId={
         deleteThreadMutation.isPending ? (deleteThreadMutation.variables?.threadId ?? null) : null
@@ -200,7 +178,7 @@ function ThreadPage() {
         renameThreadMutation.isPending ? (renameThreadMutation.variables?.threadId ?? null) : null
       }
       bottomRef={bottomRef}
-      onCreateThread={onCreateThread}
+      onCreateThread={() => void navigate({ to: "/threads" })}
       onSelectThread={(nextThreadId) =>
         void navigate({ to: "/threads/$threadId", params: { threadId: nextThreadId } })
       }
