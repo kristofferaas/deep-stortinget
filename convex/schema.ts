@@ -1,6 +1,8 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+import { periodsTable } from "./stortinget/schema";
+
 export default defineSchema({
   cases: defineTable({
     slug: v.string(),
@@ -20,4 +22,5 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_updatedAt", ["updatedAt"]),
+  periods: periodsTable,
 });

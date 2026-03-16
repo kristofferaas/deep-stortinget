@@ -13,6 +13,7 @@ import type * as cases from "../cases.js";
 import type * as chat from "../chat.js";
 import type * as hearings from "../hearings.js";
 import type * as myFunction from "../myFunction.js";
+import type * as stortinget_periods from "../stortinget/periods.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   hearings: typeof hearings;
   myFunction: typeof myFunction;
+  "stortinget/periods": typeof stortinget_periods;
 }>;
 
 /**
