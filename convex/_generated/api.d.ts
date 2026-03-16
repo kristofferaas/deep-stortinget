@@ -9,7 +9,9 @@
  */
 
 import type * as agent from "../agent.js";
+import type * as cases from "../cases.js";
 import type * as chat from "../chat.js";
+import type * as hearings from "../hearings.js";
 import type * as myFunction from "../myFunction.js";
 
 import type {
@@ -20,7 +22,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
+  cases: typeof cases;
   chat: typeof chat;
+  hearings: typeof hearings;
   myFunction: typeof myFunction;
 }>;
 

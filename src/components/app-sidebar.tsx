@@ -21,6 +21,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "~/components/ui/sidebar";
+import { AppNavStortinget } from "~/features/stortinget/app-nav-stortinget";
 import { AppNavThreads } from "~/features/threads/app-nav-threads";
 
 const data = {
@@ -144,6 +145,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        <AppNavStortinget />
         <AppNavThreads />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
