@@ -4,7 +4,7 @@ import { v } from "convex/values";
 
 import { components, internal } from "./_generated/api";
 import { action, internalAction, mutation, query, type ActionCtx } from "./_generated/server";
-import { chatAgent } from "./agent";
+import { researchAgent } from "./agent/research";
 
 function extractText(message: unknown): string {
   if (!message || typeof message !== "object") {
@@ -63,7 +63,7 @@ async function streamPromptToThread(
     return null;
   }
 
-  const { thread } = await chatAgent.continueThread(ctx, {
+  const { thread } = await researchAgent.continueThread(ctx, {
     threadId: args.threadId,
   });
 
@@ -147,7 +147,7 @@ export const listMessages = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const page = await chatAgent.listMessages(ctx, {
+    const page = await researchAgent.listMessages(ctx, {
       threadId: args.threadId,
       paginationOpts: { cursor: null, numItems: 200 },
       excludeToolMessages: true,
@@ -174,13 +174,13 @@ export const listThreadMessages = query({
   },
   returns: vStreamMessagesReturnValue,
   handler: async (ctx, args) => {
-    const paginated = await chatAgent.listMessages(ctx, {
+    const paginated = await researchAgent.listMessages(ctx, {
       threadId: args.threadId,
       paginationOpts: args.paginationOpts,
       excludeToolMessages: true,
       statuses: ["success", "failed", "pending"],
     });
-    const streams = await chatAgent.syncStreams(ctx, {
+    const streams = await researchAgent.syncStreams(ctx, {
       threadId: args.threadId,
       streamArgs: args.streamArgs,
     });
@@ -210,13 +210,8 @@ export const createThread = action({
       throw new Error("Message cannot be empty.");
     }
 
-    const { threadId } = await chatAgent.createThread(ctx, {
+    const { threadId } = await researchAgent.createThread(ctx, {
       title: buildThreadTitle(prompt),
-    });
-
-    void ctx.runAction(internal.chat.startAgent, {
-      threadId,
-      prompt: args.prompt,
     });
 
     await ctx.scheduler.runAfter(0, internal.chat.startAgent, { threadId, prompt: args.prompt });
@@ -236,7 +231,7 @@ export const startAgent = internalAction({
       throw new Error("Message cannot be empty.");
     }
 
-    await chatAgent.generateText(ctx, { threadId: args.threadId }, { prompt: args.prompt });
+    await researchAgent.generateText(ctx, { threadId: args.threadId }, { prompt: args.prompt });
   },
 });
 
@@ -267,7 +262,7 @@ export const deleteThread = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await chatAgent.deleteThreadAsync(ctx, {
+    await researchAgent.deleteThreadAsync(ctx, {
       threadId: args.threadId,
     });
     return null;
